@@ -47,16 +47,12 @@ def main():
          )
         
      try:
-        # 连接MQTT
         print("正在连接MQTT...")
-
         if simulator_mian_screen.connect():
             print("连接MQTT成功")
-            
-            # 启动信号发送
+            # 启动信号发送线程和心跳线程
             if simulator_mian_screen.start_send_signal():
                 print("启动发送信号线程和心跳线程")
-                
                 try:
                 # 主线程等待关闭信号
                     while not shutdown_event.is_set():

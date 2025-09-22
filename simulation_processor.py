@@ -6,7 +6,7 @@ import json
 
 
 class  MainScreenSimulator:
-    def __init__(self, broker="127.0.0.1", port=1883, username="", password="", # 127.0.0.1 broker.emqx.io
+    def __init__(self, broker="127.0.0.1", port=1883, username="", password="",
                  client_id=None, safe_topic="", control_topic_base="",shutdown_event=None):
         self.broker=broker
         self.port=port      
@@ -16,63 +16,24 @@ class  MainScreenSimulator:
         self.control_topic_base=control_topic_base
         self.Flag_mqttConnected=0
         self.shutdown_event=shutdown_event
-
-        # 创建 MQTT 客户端 ID
-        if client_id is None:
-            random_suffix=''.join(random.choices('0123456789abcdefghijklmnopqrstuvwxyz', k=6))   #话题后缀避重复
-            self.client_id=f"main_screen_sim_{random_suffix}"
-        else:
-            self.client_id=client_id
+        self.client_id=client_id
 
         #创建MQTT客户端
         self.is_connected=False   #连接状态
         self.heartbeat_value=0   #记录心跳值
         self.running = False   #运行标志
-
-        #控制信号
-        # self.ACTION_1=127
-        # self.ACTION_2=127
-        # self.ACTION_3=127
-        # self.ACTION_4=127
-        # self.ACTION_5=127
-        # self.ACTION_6=127
-        # self.POWER_1=False
-        # self.POWER_2=False
-        # self.POWER_3=False
-        # self.POWER_4=False
-        # self.POWER_5=False
-        # self.POWER_6=False
-        # self.POWER_16=False
-        # self.POWER_17=False
-        # self.AUX_1=0
-        # self.AUX_2=0
+        self.control_signals={} #要发送的信号         
 
         #创建心跳线程和控制线程
         self.heartbeat_thread=None
         self.control_thread=None 
-        #要发送的信号
-        self.control_signals={
-            "action1":127,
-            "action2":127,
-            "action3":127,
-            "action4":127,
-            "action5":127,
-            "action6":127,
-            "power1":False,
-            "power2":False,
-            "power3":False,
-            "power4":False,
-            "power5":False,
-            "power6":False,
-            "power16":False,
-            "power17":False,
-            "aux1":0,
-            "aux2":0
-        }
+        
 
+
+    '''初始化结束，下面是MQTT客户端的功能模块'''    
     def on_connect(self,client, userdata, flags, rc):
         if rc == 0:
-            print("on_connect成功")
+            print("已连接到MQTT服务器")
             self.is_connected = True
         else:
             print(f"on_connect失败，错误代码：{rc}")
@@ -85,18 +46,13 @@ class  MainScreenSimulator:
     def connect(self):
         try:
             self.client=mqtt.Client(client_id=self.client_id, clean_session=True)
-            self.client.on_connect=self.on_connect                        #连接MQTT服务器
-            self.client.on_disconnect=self.on_disconnect                  #断开连接
-
+            self.client.on_connect=self.on_connect                        #设置连接MQTT服务器的回调函数
+            self.client.on_disconnect=self.on_disconnect                  #设置断开MQTT服务器的回调函数
             if self.username and self.password:
                 self.client.username_pw_set(self.username, self.password)   #添加用户名和密码
-
-            #连接MQTT
-            #self.client.connect(self.broker, self.port, 60)
-            #print(f"尝试连接到MQTT Broker")
-            result= self.client.connect(self.broker, self.port, 60)
             
-            # print(f"connect_1")
+            result= self.client.connect(self.broker, self.port, 60) #连接MQTT
+            
             if result != mqtt.MQTT_ERR_SUCCESS:
                  print(f"连接MQTT返回错误码: {result.name}({result.value})")
                  return False
@@ -104,24 +60,10 @@ class  MainScreenSimulator:
             self.client.loop_start()          #启动MQTT客户端
             timeout = 10
             start_time = time.time()
-
             while not self.is_connected:
                 time.sleep(0.1)
-
                 if (time.time() - start_time) < timeout:
-                    print("MQTT连接暂未超时，继续等待")
-                else:
-                     print("MQTT连接已超时")
-                     self.Flag_mqttConnected=1
-                
-            
-            if not self.Flag_mqttConnected:
-                print(f"已连接到MQTT服务器")
-            else:
-                 print("MQTT连接不成功")
-            
-            
-            
+                    print("MQTT连接暂未超时，继续等待")  
         
             return self.is_connected         #返回连接状态
 
@@ -135,22 +77,6 @@ class  MainScreenSimulator:
          self.client.disconnect()
          print("MQTT客户端已断开连接") 
 
-    # def update_signal(self):    #方案一：随机更新控制信号并发送     方案二：控制每一个信号的发送
-    #     """更新控制信号"""
-    #     for i in range(1, 7):
-    #         signal_name=f"action{i}"
-    #         current_value = self.control_signals[signal_name]
-    #         new_value = max(0, min(255, current_value + random.randint(-10, 10)))      #随机调整控制信号，模拟大屏发送的信号
-    #         self.control_signals[signal_name] = new_value
-    #         print(f"更新控制信号 {signal_name}: {current_value} -> {new_value}")
-
-    #     for i in range(1, 7):
-    #         signal_name=f"power{i}"
-    #         self.control_signals[signal_name] = not self.control_signals[signal_name] 
-
-    #     for i in range(1,3):
-    #         signal_name=f"aux{i}"
-    #         self.control_signals[signal_name] = random.randint(0, 3)
 
     def update_signal(self):
         """手动控制信号"""
@@ -259,7 +185,7 @@ class  MainScreenSimulator:
         """停止发送控制信号和心跳"""
         self.running=False
         if self.heartbeat_thread:
-            self.heartbeat_thread.join(timeout=1)      #join()函数等待线程结束，等待0.1s
+            self.heartbeat_thread.join(timeout=1)      #join()函数等待线程结束，等待1s
         if self.control_thread:
             self.control_thread.join(timeout=1)
         print("已停止发送信号和心跳")
