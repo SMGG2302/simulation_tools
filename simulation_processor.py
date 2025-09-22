@@ -31,17 +31,6 @@ class  MainScreenSimulator:
 
 
     '''初始化结束，下面是MQTT客户端的功能模块'''    
-    def on_connect(self,client, userdata, flags, rc):
-        if rc == 0:
-            print("已连接到MQTT服务器")
-            self.is_connected = True
-        else:
-            print(f"on_connect失败，错误代码：{rc}")
-        
-    def on_disconnect(self,client, userdata, rc):
-        print("已断开与MQTT服务器的连接")
-        self.is_connected = False
-
     #连接MQTT服务器
     def connect(self):
         try:
@@ -70,14 +59,82 @@ class  MainScreenSimulator:
         except Exception as e:
             print(f"连接MQTT Broker时发生错误: {e}")
             return False
-           
-    def disconnect(self):
-        if self.client:
-         self.client.loop_stop()
-         self.client.disconnect()
-         print("MQTT客户端已断开连接") 
+    
+    # 连接的回调函数       
+    def on_connect(self,client, userdata, flags, rc):
+        if rc == 0:
+            print("已连接到MQTT服务器")
+            self.is_connected = True
+        else:
+            print(f"on_connect失败，错误代码：{rc}")
+    
+    # 断连的回调函数      
+    def on_disconnect(self,client, userdata, rc):
+        print("已断开与MQTT服务器的连接")
+        self.is_connected = False
+    
+    '''以下开始是功能函数'''
+    def start_send_signal(self):
+        """启动发送控制信号和心跳"""
+        self.running=True
+        #启动心跳线程
+        self.heartbeat_thread=threading.Thread(target=self.heartbeat_task,name="heartbeat_thread")
+        self.heartbeat_thread.start()
+
+        #启动控制线程
+        self.control_thread=threading.Thread(target=self.control_task,name="control_thread")
+        self.control_thread.start()
+
+        print("已启动发送控制信号和心跳")
+        return True
+   
+    #心跳发送功能函数
+    def heartbeat_task(self):
+        """心跳线程"""
+        while self.running and not self.shutdown_event.is_set():
+            if self.is_connected:  
+                self.send_heartbeat()    
+                print("已发送心跳") 
+                time.sleep(2)     #每2秒发送一次心跳，修改数值可以修改发送速度
+
+    def send_heartbeat(self):
+        """发送心跳"""
+        if not self.is_connected or not self.safe_topic:
+           print(f"无法发送心跳,因为MQTT客户端未连接到服务器或缺少安全主题")
+           return False
+        try:
+            self.heartbeat_value = (self.heartbeat_value + 1) % 256   #0-255循坏发送心跳
+            
+            #发布心跳消息
+            result,_ = self.client.publish(
+                self.safe_topic, 
+                str(self.heartbeat_value), # json
+                qos=0, 
+                retain=False
+            )
+            if result == mqtt.MQTT_ERR_SUCCESS:
+                print(f"已发送心跳: {self.heartbeat_value}")
+            else:
+                print(f"发送心跳失败: {result}")
+                return False
+        except Exception as e:
+            print(f"发送心跳消息时发生错误: {e}")
+            return False
+
+    #控制信号发送功能函数
+    def control_task(self):
+        """控制线程"""
+        send_count=0
+        while self.running and not self.shutdown_event.is_set():
+            if self.is_connected:  
+                self.update_signal()
+                self.send_control_signals()
+                send_count+=1
+                print(f"已发送{send_count}个控制信号")  
+                time.sleep(2)    #每1秒发送一次控制信号
 
 
+        #加载控制信号文件
     def update_signal(self):
         """手动控制信号"""
         try:
@@ -102,30 +159,6 @@ class  MainScreenSimulator:
         except Exception as e:
              print(f"加载信号文件失败: {e}")
 
-    def send_heartbeat(self):
-        """发送心跳"""
-        if not self.is_connected or not self.safe_topic:
-           print(f"无法发送心跳,因为MQTT客户端未连接到服务器或没有安全主题")
-           return False
-        try:
-            self.heartbeat_value = (self.heartbeat_value + 1) % 256   #0-255循坏发送心跳
-            
-            #发布心跳消息
-            result,_ = self.client.publish(
-                self.safe_topic, 
-                str(self.heartbeat_value), # json
-                qos=0, 
-                retain=False
-            )
-            if result == mqtt.MQTT_ERR_SUCCESS:
-                print(f"已发送心跳: {self.heartbeat_value}")
-            else:
-                print(f"发送心跳失败: {result}")
-                return False
-        except Exception as e:
-            print(f"发送心跳消息时发生错误: {e}")
-            return False
-        
     def send_control_signals(self):
         """发送控制信号"""
         if not self.is_connected or not self.control_topic_base:
@@ -143,43 +176,18 @@ class  MainScreenSimulator:
                     print(f"已发送控制信号: {topic} - {payload}")
                     success_conut+=1
                 else:
-                    print(f"发送控制信号失败: {topic} - {payload}")
+                    print(f"发送控制信号失败")
         except Exception as e:
             print(f"发送控制信号时发生错误: {e}")
             return False
-        
-    def heartbeat_task(self):
-        """心跳线程"""
-        while self.running and not self.shutdown_event.is_set():
-            if self.is_connected:  
-                self.send_heartbeat()    
-                print("已发送心跳") 
-                time.sleep(2)     #每1秒发送一次心跳
 
-    def control_task(self):
-        """控制线程"""
-        send_count=0
-        while self.running and not self.shutdown_event.is_set():
-            if self.is_connected:  
-                self.update_signal()
-                self.send_control_signals()
-                send_count+=1
-                print(f"已发送{send_count}个控制信号")  
-                time.sleep(2)    #每1秒发送一次控制信号
 
-    def start_send_signal(self):
-        """启动发送控制信号和心跳"""
-        self.running=True
-        #启动心跳线程
-        self.heartbeat_thread=threading.Thread(target=self.heartbeat_task,name="heartbeat_thread")
-        self.heartbeat_thread.start()
-
-        #启动控制线程
-        self.control_thread=threading.Thread(target=self.control_task,name="control_thread")
-        self.control_thread.start()
-
-        print("已启动发送控制信号和心跳")
-        return True
+    '''手动断连功能函数'''
+    def disconnect(self):
+        if self.client:
+         self.client.loop_stop()
+         self.client.disconnect()
+         print("MQTT客户端已断开连接") 
     
     def stop_send_signal(self):
         """停止发送控制信号和心跳"""
