@@ -12,16 +12,21 @@ class ControlPanel:
         self.control_frame = ttk.LabelFrame(self.root, text="控制面板", padding="10")
         self.control_frame.grid(row=0, column=0, padx=10, pady=10)
 
-        # 创建最大值和最小值输入框（5组）
+        # 创建最大值和最小值输入框（5组）以及布尔开关
         self.max_min_switches = []  # 存储布尔开关
+        row = 0  # 初始行号
         for i in range(5):
-            self.create_value_input(f"Max Value {i+1}", 0, 255, 127, i*3)
-            self.create_value_input(f"Min Value {i+1}", 0, 255, 0, i*3+1)
+            self.create_switch(f"Send Data {i+1}", row)  # 创建布尔按钮
+            row += 1  # 布尔按钮后面留空一行
+            self.create_value_input(f"Max Value {i+1}", 0, 255, 127, row)  # 创建Max Value输入框
+            row += 1
+            self.create_value_input(f"Min Value {i+1}", 0, 255, 0, row)  # 创建Min Value输入框
+            row += 2  # 留空一行作为间隔
 
         # 创建10个布尔值按钮
         self.bool_buttons = []
         for i in range(10):
-            self.create_bool_button(f"Bool Button {i+1}", i+5)
+            self.create_bool_button(f"Bool Button {i+1}", i+15)
 
         # 创建更新按钮
         self.create_update_button()
@@ -41,9 +46,6 @@ class ControlPanel:
         """创建文本框和标签"""
         # 布尔开关位于标签的左边
         bool_var = tk.BooleanVar()
-        switch = ttk.Checkbutton(self.control_frame, text="Send", variable=bool_var)
-        switch.grid(row=row, column=0, pady=5)
-
 
         # 创建文本框和标签并插入默认值
         label_widget = ttk.Label(self.control_frame, text=label)
@@ -74,7 +76,7 @@ class ControlPanel:
     def create_update_button(self):
         """创建更新按钮"""
         self.update_button = ttk.Button(self.control_frame, text="Update", command=self.update)
-        self.update_button.grid(row=25, column=0, columnspan=2, pady=10)
+        self.update_button.grid(row=35, column=0, columnspan=2, pady=10)
 
     def update(self):
         """更新按钮点击事件"""
