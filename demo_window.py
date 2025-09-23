@@ -44,7 +44,6 @@ class ControlPanel:
 
     def create_value_input(self, label, min_val, max_val, default_val, row):
         """创建文本框和标签"""
-        # 布尔开关位于标签的左边
         bool_var = tk.BooleanVar()
 
         # 创建文本框和标签并插入默认值
@@ -56,7 +55,6 @@ class ControlPanel:
         entry_widget.grid(row=row, column=2, pady=5)
 
         # 将每个输入框和开关作为属性存储在实例中
-        self.max_min_switches.append(bool_var)
         setattr(self, f"{label.lower().replace(' ', '_').replace('(', '').replace(')', '')}_entry", entry_widget)
 
     def create_switch(self, label, row):
@@ -85,17 +83,24 @@ class ControlPanel:
             max_vals = [int(getattr(self, f"max_value_{i+1}_entry").get()) for i in range(5)]
             min_vals = [int(getattr(self, f"min_value_{i+1}_entry").get()) for i in range(5)]
 
-            # 获取选中的布尔按钮并输出相应的最大值和最小值
-            for max_val, min_val, bool_var in zip(max_vals, min_vals, self.max_min_switches):
-                if bool_var.get():  # 如果布尔值为 True，则发送该组最大值到最小值的数据
-                    for i in range(max_val, min_val-1, -10):
-                        print(i)  # 输出当前值
-                        time.sleep(0.01)  # 设置时间间隔（10秒）
-                        # 输出心跳标志
-                        print(f"Heartbeat: {self.heartbeat_value}")
-                        time.sleep(1)  # 心跳每秒输出一次
+            # 将信号更新操作移到一个新的线程中，避免阻塞主线程
+            update_thread = threading.Thread(target=self.send_control_signals, args=(max_vals, min_vals))
+            update_thread.daemon = True
+            update_thread.start()
+
         except ValueError:
             print("无效的输入。请输入有效的数字。")
+
+    def send_control_signals(self, max_vals, min_vals):
+        """在新的线程中执行控制信号的发送"""
+        for max_val, min_val, bool_var in zip(max_vals, min_vals, self.max_min_switches):
+            if bool_var.get():  # 如果布尔值为 True，则发送该组最大值到最小值的数据
+                for i in range(max_val, min_val-1, -10):
+                    print(i)  # 输出当前值
+                    time.sleep(0.01)  # 设置时间间隔（10秒）
+                    # 输出心跳标志
+                    print(f"Heartbeat: {self.heartbeat_value}")
+                    time.sleep(1)  # 心跳每秒输出一次
 
     def output_bool_status(self):
         """每秒输出一次所有布尔值按钮的状态并加上心跳值"""
