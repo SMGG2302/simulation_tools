@@ -7,11 +7,11 @@ import queue
 class ControlPanel:
     def __init__(self, root):
         self.root = root
-        self.root.title("控制面板")
+        self.root.title("模拟操作台")
 
         # 创建控制信号界面
-        self.control_frame = ttk.LabelFrame(self.root, text="控制面板", padding="10")
-        self.control_frame.grid(row=0, column=0, padx=10, pady=10)
+        self.control_frame = ttk.LabelFrame(self.root, text="模拟操作台", padding="70")
+        self.control_frame.grid(row=0, column=50, padx=10, pady=10)
 
         # 创建最大值和最小值输入框（8组）以及布尔开关
         self.max_min_switches = []  # 存储布尔开关
@@ -84,7 +84,7 @@ class ControlPanel:
         """创建布尔值按钮"""
         bool_var = tk.BooleanVar()
         button = ttk.Checkbutton(self.control_frame, text=label, variable=bool_var)
-        button.grid(row=index-10, column=10, columnspan=2, pady=5)
+        button.grid(row=index-10, column=20, columnspan=2, pady=5)
         self.bool_buttons.append(bool_var)
 
     def create_update_button(self):
@@ -96,8 +96,8 @@ class ControlPanel:
         """更新按钮点击事件"""
         try:
             # 获取用户输入的最大值、最小值
-            max_vals = [int(getattr(self, f"max_value_{i+1}_entry").get()) for i in range(8)]  # 8个线性值
-            min_vals = [int(getattr(self, f"min_value_{i+1}_entry").get()) for i in range(8)]  # 8个线性值
+            max_vals = [int(getattr(self, f"action{i+1}_max_entry").get()) for i in range(8)]  # 8个线性值
+            min_vals = [int(getattr(self, f"action{i+1}_min_entry").get()) for i in range(8)]  # 8个线性值
 
             # 将信号更新操作移到一个新的线程中，避免阻塞主线程
             update_thread = threading.Thread(target=self.send_control_signals, args=(max_vals, min_vals))
@@ -115,8 +115,8 @@ class ControlPanel:
                     print(f"发送信号：{val}")
                     time.sleep(0.01)  # 设置时间间隔（10秒）
                     # 更新数据到 update_queue 字典
-                    self.update_queue[f"data_{i+1}_signal"] = val
-                    self.update_queue[f"data_{i+1}_heartbeat"] = self.heartbeat_value
+                    self.update_queue[f"action{i+1}"] = val
+                    self.update_queue[f"action{i+1}_heartbeat"] = self.heartbeat_value
                     # 检查字典变化并删除不需要的键（仅针对线性值）
                     self.check_and_print_update_queue()
                     time.sleep(1)  # 心跳每秒输出一次
@@ -126,9 +126,15 @@ class ControlPanel:
         while True:
             bool_status = []
             for i, bool_var in enumerate(self.bool_buttons):
-                bool_status.append(f"Bool Button {i+1} {'ON' if bool_var.get() else 'OFF'}")
-                # 更新数据到 update_queue 字典，布尔值每次都更新
-                self.update_queue[f"bool_button_{i+1}"] = 'ON' if bool_var.get() else 'OFF'
+                if i < 11:
+                    bool_status.append(f"Power{i+1} {'True' if bool_var.get() else 'False'}")
+                    self.update_queue[f"Power{i+1}"] = 'True' if bool_var.get() else 'False'
+                elif i < 13:
+                    bool_status.append(f"Power{i+5} {'True' if bool_var.get() else 'False'}")
+                    self.update_queue[f"Power{i+5}"] = 'True' if bool_var.get() else 'False'
+                else:
+                    bool_status.append(f"aux{i-12} {'1' if bool_var.get() else '0'}")
+                    self.update_queue[f"aux{i-12}"] = '1' if bool_var.get() else '0'
             
             # 输出所有布尔值状态，并在最后输出当前心跳数值
             print(" | ".join(bool_status), f"Heartbeat: {self.heartbeat_value}")
