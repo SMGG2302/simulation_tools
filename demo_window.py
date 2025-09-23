@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import time
 import threading
+import queue
 
 class ControlPanel:
     def __init__(self, root):
@@ -14,6 +15,8 @@ class ControlPanel:
 
         # 创建最大值和最小值输入框（5组）以及布尔开关
         self.max_min_switches = []  # 存储布尔开关
+        self.update_queue = {}  # 存储数据更新的字典
+        self.previous_update_queue = {}  # 上次的更新字典
         row = 0  # 初始行号
         for i in range(5):
             self.create_switch(f"Send Data {i+1}", row)  # 创建布尔按钮
@@ -92,14 +95,17 @@ class ControlPanel:
             print("无效的输入。请输入有效的数字。")
 
     def send_control_signals(self, max_vals, min_vals):
-        """在新的线程中执行控制信号的发送"""
-        for max_val, min_val, bool_var in zip(max_vals, min_vals, self.max_min_switches):
+        """在新的线程中执行控制信号的发送并更新update_queue"""
+        for i, (max_val, min_val, bool_var) in enumerate(zip(max_vals, min_vals, self.max_min_switches)):
             if bool_var.get():  # 如果布尔值为 True，则发送该组最大值到最小值的数据
-                for i in range(max_val, min_val-1, -10):
-                    print(i)  # 输出当前值
+                for val in range(max_val, min_val-1, -10):
+                    print(f"发送信号：{val}")
                     time.sleep(0.01)  # 设置时间间隔（10秒）
-                    # 输出心跳标志
-                    print(f"Heartbeat: {self.heartbeat_value}")
+                    # 更新数据到 update_queue 字典
+                    self.update_queue[f"data_{i+1}_signal"] = val
+                    self.update_queue[f"data_{i+1}_heartbeat"] = self.heartbeat_value
+                    # 检查字典变化并删除不需要的键（仅针对线性值）
+                    self.check_and_print_update_queue()
                     time.sleep(1)  # 心跳每秒输出一次
 
     def output_bool_status(self):
@@ -108,10 +114,29 @@ class ControlPanel:
             bool_status = []
             for i, bool_var in enumerate(self.bool_buttons):
                 bool_status.append(f"Bool Button {i+1} {'ON' if bool_var.get() else 'OFF'}")
+                # 更新数据到 update_queue 字典，布尔值每次都更新
+                self.update_queue[f"bool_button_{i+1}"] = 'ON' if bool_var.get() else 'OFF'
             
             # 输出所有布尔值状态，并在最后输出当前心跳数值
             print(" | ".join(bool_status), f"Heartbeat: {self.heartbeat_value}")
+            # 检查字典变化并删除不需要的键（仅针对线性值）
+            self.check_and_print_update_queue()
             time.sleep(1)  # 每秒输出一次布尔值状态
+
+    def check_and_print_update_queue(self):
+        """检查 update_queue 是否发生变化，如果有变化则打印，并摧毁相同键（仅针对线性值）"""
+        for key in list(self.update_queue.keys()):
+            # 仅针对线性值检查（max、min 值），布尔值每次都更新
+            if key.startswith('data_'):  # 如果是线性数据的key
+                # 如果当前字典中的值与上次的值相同，则摧毁该键
+                if key in self.previous_update_queue and self.update_queue[key] == self.previous_update_queue[key]:
+                    #print(f"摧毁相同的键: {key}")
+                    del self.update_queue[key]
+        
+        # 打印更新后的字典
+        if self.update_queue != self.previous_update_queue:
+            print("更新后的 update_queue: ", self.update_queue)
+            self.previous_update_queue = self.update_queue.copy()
 
     def generate_heartbeat(self):
         """生成心跳值并循环"""
