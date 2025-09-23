@@ -13,14 +13,15 @@ class ControlPanel:
         self.control_frame.grid(row=0, column=0, padx=10, pady=10)
 
         # 创建最大值和最小值输入框（5组）
+        self.max_min_switches = []  # 存储布尔开关
         for i in range(5):
-            self.create_value_input(f"Max Value {i+1}", 0, 255, 127, i*2)
-            self.create_value_input(f"Min Value {i+1}", 0, 255, 0, i*2+1)
+            self.create_value_input(f"Max Value {i+1}", 0, 255, 127, i*3)
+            self.create_value_input(f"Min Value {i+1}", 0, 255, 0, i*3+1)
 
         # 创建10个布尔值按钮
         self.bool_buttons = []
         for i in range(10):
-            self.create_bool_button(f"Bool Button {i+1}", i)
+            self.create_bool_button(f"Bool Button {i+1}", i+5)
 
         # 创建更新按钮
         self.create_update_button()
@@ -38,16 +39,30 @@ class ControlPanel:
 
     def create_value_input(self, label, min_val, max_val, default_val, row):
         """创建文本框和标签"""
+        # 布尔开关位于标签的左边
+        bool_var = tk.BooleanVar()
+        switch = ttk.Checkbutton(self.control_frame, text="Send", variable=bool_var)
+        switch.grid(row=row, column=0, pady=5)
+
+
+        # 创建文本框和标签并插入默认值
         label_widget = ttk.Label(self.control_frame, text=label)
-        label_widget.grid(row=row, column=0, sticky="w", pady=5)
-        
-        # 创建文本框并插入默认值
+        label_widget.grid(row=row, column=1, sticky="w", padx=5)
+
         entry_widget = ttk.Entry(self.control_frame)
         entry_widget.insert(0, str(default_val))  # 设置默认值
-        entry_widget.grid(row=row, column=1, pady=5)
-        
-        # 将每个输入框作为属性存储在实例中
+        entry_widget.grid(row=row, column=2, pady=5)
+
+        # 将每个输入框和开关作为属性存储在实例中
+        self.max_min_switches.append(bool_var)
         setattr(self, f"{label.lower().replace(' ', '_').replace('(', '').replace(')', '')}_entry", entry_widget)
+
+    def create_switch(self, label, row):
+        """创建布尔开关按钮"""
+        bool_var = tk.BooleanVar()
+        switch = ttk.Checkbutton(self.control_frame, text=label, variable=bool_var)
+        switch.grid(row=row, column=1, columnspan=2, pady=5)
+        self.max_min_switches.append(bool_var)  # 将布尔值存储在列表中
 
     def create_bool_button(self, label, index):
         """创建布尔值按钮"""
@@ -59,7 +74,7 @@ class ControlPanel:
     def create_update_button(self):
         """创建更新按钮"""
         self.update_button = ttk.Button(self.control_frame, text="Update", command=self.update)
-        self.update_button.grid(row=20, column=0, columnspan=2, pady=10)
+        self.update_button.grid(row=25, column=0, columnspan=2, pady=10)
 
     def update(self):
         """更新按钮点击事件"""
@@ -69,11 +84,11 @@ class ControlPanel:
             min_vals = [int(getattr(self, f"min_value_{i+1}_entry").get()) for i in range(5)]
 
             # 获取选中的布尔按钮并输出相应的最大值和最小值
-            for max_val, min_val, bool_var in zip(max_vals, min_vals, self.bool_buttons):
+            for max_val, min_val, bool_var in zip(max_vals, min_vals, self.max_min_switches):
                 if bool_var.get():  # 如果布尔值为 True，则发送该组最大值到最小值的数据
-                    for i in range(max_val, min_val-1, -1):
+                    for i in range(max_val, min_val-1, -10):
                         print(i)  # 输出当前值
-                        time.sleep(0.1)  # 设置时间间隔（10秒）
+                        time.sleep(0.01)  # 设置时间间隔（10秒）
                         # 输出心跳标志
                         print(f"Heartbeat: {self.heartbeat_value}")
                         time.sleep(1)  # 心跳每秒输出一次
