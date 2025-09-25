@@ -111,7 +111,7 @@ class ControlPanel:
         """在新的线程中执行控制信号的发送并更新update_queue"""
         for i, (max_val, min_val, bool_var) in enumerate(zip(max_vals, min_vals, self.max_min_switches)):
             if bool_var.get():  # 如果布尔值为 True，则发送该组最大值到最小值的数据
-                for val in range(max_val, min_val-1, -10):
+                for val in range(max_val, min_val-1, -2):
                     #print(f"发送信号：{val}")
                     time.sleep(0.01)  # 设置时间间隔（10秒）
                     # 更新数据到 update_queue 字典

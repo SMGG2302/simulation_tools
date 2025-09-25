@@ -29,8 +29,8 @@ def run_gui():
     def check_update_queue():
         global update_queue  # 在函数内部使用全局变量 update_queue
         update_queue = panel.update_queue  # 获取 update_queue
-        print(update_queue)  # 打印当前 update_queue
-        root.after(1000, check_update_queue)  # 每1秒调用一次
+        #print(update_queue)  # 打印当前 update_queue
+        root.after(300, check_update_queue)  # 每1秒调用一次
 
     check_update_queue()  # 启动定时器
 
