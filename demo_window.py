@@ -163,7 +163,7 @@ class ControlPanel:
             self.heartbeat_value = (self.heartbeat_value + 1) % 256  # 心跳值循环
             time.sleep(1)  # 每秒更新一次心跳值
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    panel = ControlPanel(root)
-    root.mainloop()
+# if __name__ == "__main__":
+#     root = tk.Tk()
+#     panel = ControlPanel(root)
+#     root.mainloop()
