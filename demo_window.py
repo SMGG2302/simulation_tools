@@ -146,7 +146,7 @@ class ControlPanel:
         """检查 update_queue 是否发生变化，如果有变化则打印，并摧毁相同键（仅针对线性值）"""
         for key in list(self.update_queue.keys()):
             # 仅针对线性数据检查（max、min 值），布尔值每次都更新
-            if key.startswith('data_'):  # 如果是线性数据的key
+            if key.startswith('action'):  # 如果是线性数据的key
                 # 如果当前字典中的值与上次的值相同，则摧毁该键
                 if key in self.previous_update_queue and self.update_queue[key] == self.previous_update_queue[key]:
                     print(f"摧毁相同的键: {key}")
