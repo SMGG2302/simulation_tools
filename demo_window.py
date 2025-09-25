@@ -137,7 +137,7 @@ class ControlPanel:
                     self.update_queue[f"aux{i-12}"] = '1' if bool_var.get() else '0'
             
             # 输出所有布尔值状态，并在最后输出当前心跳数值
-            print(" | ".join(bool_status), f"Heartbeat: {self.heartbeat_value}")
+            #print(" | ".join(bool_status), f"Heartbeat: {self.heartbeat_value}")
             # 检查字典变化并删除不需要的键（仅针对线性值）
             self.check_and_print_update_queue()
             time.sleep(1)  # 每秒输出一次布尔值状态
@@ -162,6 +162,10 @@ class ControlPanel:
         while True:
             self.heartbeat_value = (self.heartbeat_value + 1) % 256  # 心跳值循环
             time.sleep(1)  # 每秒更新一次心跳值
+
+    def getout_update_queue(self):
+        """获取 update_queue 字典"""
+        return self.update_queue.copy()
 
 # if __name__ == "__main__":
 #     root = tk.Tk()
