@@ -12,6 +12,8 @@ from demo_window import ControlPanel
 
 # 全局关闭事件
 shutdown_event = threading.Event()
+# 声明 update_queue 为全局变量
+update_queue = {}
 
 def signal_handler(sig, frame):
     """处理操作系统信号（如 Ctrl+C）"""
@@ -19,12 +21,13 @@ def signal_handler(sig, frame):
     shutdown_event.set()
 
 def run_gui():
+    global update_queue  # 在函数内部使用全局变量 update_queue
     """启动 Tkinter GUI"""
     root = tk.Tk()
     panel = ControlPanel(root)
 
-    # 定期获取和打印 update_queue
     def check_update_queue():
+        global update_queue  # 在函数内部使用全局变量 update_queue
         update_queue = panel.update_queue  # 获取 update_queue
         print(update_queue)  # 打印当前 update_queue
         root.after(1000, check_update_queue)  # 每1秒调用一次
@@ -57,7 +60,8 @@ def run_simulator():
         client_id=config["client_id"],
         safe_topic=config["safe_topic"],
         control_topic_base=config["control_topic_base"],
-        shutdown_event=shutdown_event
+        shutdown_event=shutdown_event,
+        update_queue=update_queue
     )
 
     try:
@@ -69,6 +73,7 @@ def run_simulator():
                 # 主线程等待关闭信号
                 while not shutdown_event.is_set():
                     time.sleep(0.5)  # 每0.5s检测一次关闭信号
+                    simulator_mian_screen.update_queue = update_queue
             else:
                 print("启动信号发送失败")
         else:

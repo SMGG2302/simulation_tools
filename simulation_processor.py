@@ -7,7 +7,7 @@ import json
 
 class  MainScreenSimulator:
     def __init__(self, broker="127.0.0.1", port=1883, username="", password="",
-                 client_id=None, safe_topic="", control_topic_base="",shutdown_event=None):
+                 client_id=None, safe_topic="", control_topic_base="",shutdown_event=None, update_queue=None):
         self.broker=broker
         self.port=port      
         self.username=username
@@ -16,6 +16,7 @@ class  MainScreenSimulator:
         self.control_topic_base=control_topic_base
         self.Flag_mqttConnected=0
         self.shutdown_event=shutdown_event
+        self.update_queue=update_queue
         self.client_id=client_id
 
         #创建MQTT客户端
@@ -168,7 +169,7 @@ class  MainScreenSimulator:
         try:
             #发送控制信号
             success_conut=0
-            for signal_name, signal_value in self.control_signals.items():
+            for signal_name, signal_value in self.update_queue.items():
                 topic=f"{self.control_topic_base}{signal_name}"
                 payload=str(signal_value)                                  #话题实际内容
                 result,_=self.client.publish(topic, payload, qos=0, retain=False)
