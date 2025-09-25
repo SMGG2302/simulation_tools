@@ -112,7 +112,7 @@ class ControlPanel:
         for i, (max_val, min_val, bool_var) in enumerate(zip(max_vals, min_vals, self.max_min_switches)):
             if bool_var.get():  # 如果布尔值为 True，则发送该组最大值到最小值的数据
                 for val in range(max_val, min_val-1, -10):
-                    print(f"发送信号：{val}")
+                    #print(f"发送信号：{val}")
                     time.sleep(0.01)  # 设置时间间隔（10秒）
                     # 更新数据到 update_queue 字典
                     self.update_queue[f"action{i+1}"] = val
@@ -149,12 +149,12 @@ class ControlPanel:
             if key.startswith('action'):  # 如果是线性数据的key
                 # 如果当前字典中的值与上次的值相同，则摧毁该键
                 if key in self.previous_update_queue and self.update_queue[key] == self.previous_update_queue[key]:
-                    print(f"摧毁相同的键: {key}")
+                    #print(f"摧毁相同的键: {key}")
                     del self.update_queue[key]
         
         # 打印更新后的字典
         if self.update_queue != self.previous_update_queue:
-            print("更新后的 update_queue: ", self.update_queue)
+            #print("更新后的 update_queue: ", self.update_queue)
             self.previous_update_queue = self.update_queue.copy()
 
     def generate_heartbeat(self):
@@ -165,6 +165,7 @@ class ControlPanel:
 
     def getout_update_queue(self):
         """获取 update_queue 字典"""
+        #print("获取 update_queue 字典: ", self.update_queue.copy())
         return self.update_queue.copy()
 
 # if __name__ == "__main__":

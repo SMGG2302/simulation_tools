@@ -22,7 +22,17 @@ def run_gui():
     """启动 Tkinter GUI"""
     root = tk.Tk()
     panel = ControlPanel(root)
-    root.mainloop()
+
+    # 定期获取和打印 update_queue
+    def check_update_queue():
+        update_queue = panel.update_queue  # 获取 update_queue
+        print(update_queue)  # 打印当前 update_queue
+        root.after(1000, check_update_queue)  # 每1秒调用一次
+
+    check_update_queue()  # 启动定时器
+
+    root.mainloop()  # 启动 Tkinter 主循环
+
 
 def run_simulator():
     """启动模拟器"""
