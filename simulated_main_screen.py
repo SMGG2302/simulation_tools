@@ -17,7 +17,7 @@ update_queue = {}
 
 def signal_handler(sig, frame):
     """处理操作系统信号（如 Ctrl+C）"""
-    print("\n接收到关闭信号，正在停止模拟器...")
+    print("\n接收到关闭信号，等待关闭UI界面...")
     shutdown_event.set()
 
 def run_gui(stop_flag):
@@ -29,7 +29,7 @@ def run_gui(stop_flag):
     def check_update_queue():
         global update_queue  # 在函数内部使用全局变量 update_queue
         update_queue = panel.update_queue  # 获取 update_queue
-        root.after(300, check_update_queue)  # 每300ms调用一次
+        root.after(100, check_update_queue)  # 每300ms调用一次
 
     check_update_queue()  # 启动定时器
 
