@@ -107,17 +107,37 @@ class ControlPanel:
         except ValueError:
             print("无效的输入。请输入有效的数字。")
 
+
+    def send_signal(self, i, max_val, min_val, bool_var):
+        """在子线程中发送控制信号"""
+        if bool_var.get():  # 如果布尔值为 True，则发送该组最大值到最小值的数据
+            # 进行步退，并确保最后输出值是0
+            for val in range(max_val, min_val-1, -5):
+                # 更新数据到 update_queue 字典
+                self.update_queue[f"action{i+1}"] = val
+                self.update_queue[f"action_heartbeat"] = self.heartbeat_value
+                # 检查字典变化并删除不需要的键（仅针对线性值）
+                self.check_and_print_update_queue()
+                time.sleep(2)  # 心跳每秒输出一次
+        
+            # 在循环结束后，确保最后的值是0
+            if self.update_queue.get(f"action{i+1}") != 0:
+                self.update_queue[f"action{i+1}"] = 0
+                self.check_and_print_update_queue()  # 确保更新输出
+
     def send_control_signals(self, max_vals, min_vals):
         """在新的线程中执行控制信号的发送并更新update_queue"""
+        threads = []
         for i, (max_val, min_val, bool_var) in enumerate(zip(max_vals, min_vals, self.max_min_switches)):
-            if bool_var.get():  # 如果布尔值为 True，则发送该组最大值到最小值的数据
-                for val in range(max_val, min_val-1, -5):
-                    # 更新数据到 update_queue 字典
-                    self.update_queue[f"action{i+1}"] = val
-                    self.update_queue[f"action{i+1}_heartbeat"] = self.heartbeat_value
-                    # 检查字典变化并删除不需要的键（仅针对线性值）
-                    self.check_and_print_update_queue()
-                    time.sleep(2)  # 心跳每秒输出一次
+            # 创建线程并启动
+            thread = threading.Thread(target=self.send_signal, args=(i, max_val, min_val, bool_var))
+            threads.append(thread)
+            thread.start()
+
+        # 等待所有线程完成
+        for thread in threads:
+            thread.join()
+
 
     def output_bool_status(self):
         """每秒输出一次所有布尔值按钮的状态并加上心跳值"""
@@ -142,14 +162,8 @@ class ControlPanel:
             # 仅针对线性数据检查（max、min 值），布尔值每次都更新
             if key.startswith('action'):  # 如果是线性数据的key
                 # 如果当前字典中的值与上次的值相同，则摧毁该键
-                if key in self.previous_update_queue and self.update_queue[key] == self.previous_update_queue[key]:
-                    #print(f"摧毁相同的键: {key}")
+                if self.update_queue[key] == 0:
                     del self.update_queue[key]
-        
-        # 打印更新后的字典
-        if self.update_queue != self.previous_update_queue:
-            #print("更新后的 update_queue: ", self.update_queue)
-            self.previous_update_queue = self.update_queue.copy()
 
     def generate_heartbeat(self):
         """生成心跳值并循环"""
@@ -161,8 +175,3 @@ class ControlPanel:
         """获取 update_queue 字典"""
         #print("获取 update_queue 字典: ", self.update_queue.copy())
         return self.update_queue.copy()
-
-# if __name__ == "__main__":
-#     root = tk.Tk()
-#     panel = ControlPanel(root)
-#     root.mainloop()

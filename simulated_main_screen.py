@@ -20,7 +20,7 @@ def signal_handler(sig, frame):
     print("\n接收到关闭信号，正在停止模拟器...")
     shutdown_event.set()
 
-def run_gui():
+def run_gui(stop_flag):
     global update_queue  # 在函数内部使用全局变量 update_queue
     """启动 Tkinter GUI"""
     root = tk.Tk()
@@ -29,15 +29,21 @@ def run_gui():
     def check_update_queue():
         global update_queue  # 在函数内部使用全局变量 update_queue
         update_queue = panel.update_queue  # 获取 update_queue
-        #print(update_queue)  # 打印当前 update_queue
-        root.after(300, check_update_queue)  # 每1秒调用一次
+        root.after(300, check_update_queue)  # 每300ms调用一次
 
     check_update_queue()  # 启动定时器
 
+    # 假设当GUI关闭时，stop_flag 会被设置
+    def on_close():
+        stop_flag.set()  # 设置停止标志
+        root.quit()  # 退出主循环
+        root.destroy()  # 销毁根窗口
+
+    root.protocol("WM_DELETE_WINDOW", on_close)  # 当窗口关闭时，设置停止标志并退出
+
     root.mainloop()  # 启动 Tkinter 主循环
 
-
-def run_simulator():
+def run_simulator(stop_flag):
     """启动模拟器"""
     # 生成8位随机后缀（数字+大写字母）
     random_suffix = ''.join(random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=8))
@@ -71,8 +77,8 @@ def run_simulator():
             if simulator_mian_screen.start_send_signal():
                 print("启动发送信号线程和心跳线程")
                 # 主线程等待关闭信号
-                while not shutdown_event.is_set():
-                    time.sleep(0.01)  # 每0.5s检测一次关闭信号
+                while not stop_flag.is_set():  # 检查 stop_flag 是否被设置
+                    time.sleep(0.01)  # 每0.01秒检测一次关闭信号
                     simulator_mian_screen.update_queue = update_queue
             else:
                 print("启动信号发送失败")
@@ -90,22 +96,29 @@ def run_simulator():
 
 def main():
     """主函数"""
+    stop_flag = threading.Event()  # 创建一个线程事件作为停止标志
+
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
     # 启动模拟器线程
-    simulator_thread = threading.Thread(target=run_simulator)
+    simulator_thread = threading.Thread(target=run_simulator, args=(stop_flag,))
     simulator_thread.daemon = True  # 守护线程，程序退出时自动清理
     simulator_thread.start()
 
     # 启动GUI线程
-    gui_thread = threading.Thread(target=run_gui)
+    gui_thread = threading.Thread(target=run_gui, args=(stop_flag,))
     gui_thread.daemon = True  # 守护线程，程序退出时自动清理
     gui_thread.start()
 
     # 等待线程结束
-    gui_thread.join()
-    simulator_thread.join()
+    try:
+        gui_thread.join()
+        simulator_thread.join()
+    except KeyboardInterrupt:
+        print("捕获到键盘中断，退出程序")
+        stop_flag.set()  # 设置 stop_flag，通知所有线程停止
+        exit(0)
 
 if __name__ == "__main__":
     main()
