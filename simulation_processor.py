@@ -96,7 +96,7 @@ class  MainScreenSimulator:
             if self.is_connected:  
                 self.send_heartbeat()    
                 print("已发送心跳") 
-                time.sleep(2)     #每2秒发送一次心跳，修改数值可以修改发送速度
+                time.sleep(0.1)     #每2秒发送一次心跳，修改数值可以修改发送速度
 
     def send_heartbeat(self):
         """发送心跳"""
@@ -132,7 +132,7 @@ class  MainScreenSimulator:
                 self.send_control_signals()
                 send_count+=1
                 print(f"已发送{send_count}个控制信号")  
-                time.sleep(2)    #每1秒发送一次控制信号
+                time.sleep(0.1)    #每1秒发送一次控制信号
 
 
         #加载控制信号文件
