@@ -11,7 +11,7 @@ class ControlPanel:
 
         # 创建控制信号界面
         self.control_frame = ttk.LabelFrame(self.root, text="模拟操作台", padding="70")
-        self.control_frame.grid(row=0, column=50, padx=10, pady=10)
+        self.control_frame.grid(row=0, column=40, padx=10, pady=10)
 
         # 创建最大值和最小值输入框（8组）以及布尔开关
         self.max_min_switches = []  # 存储布尔开关
@@ -90,7 +90,7 @@ class ControlPanel:
     def create_update_button(self):
         """创建更新按钮"""
         self.update_button = ttk.Button(self.control_frame, text="Update", command=self.update)
-        self.update_button.grid(row=35, column=0, columnspan=2, pady=10)
+        self.update_button.grid(row=30, column=20, columnspan=2, pady=10)
 
     def update(self):
         """更新按钮点击事件"""
@@ -112,14 +112,12 @@ class ControlPanel:
         for i, (max_val, min_val, bool_var) in enumerate(zip(max_vals, min_vals, self.max_min_switches)):
             if bool_var.get():  # 如果布尔值为 True，则发送该组最大值到最小值的数据
                 for val in range(max_val, min_val-1, -5):
-                    #print(f"发送信号：{val}")
-                    time.sleep(0.01)  # 设置时间间隔（10秒）
                     # 更新数据到 update_queue 字典
                     self.update_queue[f"action{i+1}"] = val
                     self.update_queue[f"action{i+1}_heartbeat"] = self.heartbeat_value
                     # 检查字典变化并删除不需要的键（仅针对线性值）
-                    #self.check_and_print_update_queue()
-                    time.sleep(0.1)  # 心跳每秒输出一次
+                    self.check_and_print_update_queue()
+                    time.sleep(2)  # 心跳每秒输出一次
 
     def output_bool_status(self):
         """每秒输出一次所有布尔值按钮的状态并加上心跳值"""
@@ -127,20 +125,16 @@ class ControlPanel:
             bool_status = []
             for i, bool_var in enumerate(self.bool_buttons):
                 if i < 11:
-                    bool_status.append(f"Power{i+1} {'True' if bool_var.get() else 'False'}")
-                    self.update_queue[f"Power{i+1}"] = 'True' if bool_var.get() else 'False'
+                    bool_status.append(f"power{i+1} {'True' if bool_var.get() else 'False'}")
+                    self.update_queue[f"power{i+1}"] = 'True' if bool_var.get() else 'False'
                 elif i < 13:
-                    bool_status.append(f"Power{i+5} {'True' if bool_var.get() else 'False'}")
-                    self.update_queue[f"Power{i+5}"] = 'True' if bool_var.get() else 'False'
+                    bool_status.append(f"power{i+5} {'True' if bool_var.get() else 'False'}")
+                    self.update_queue[f"power{i+5}"] = 'True' if bool_var.get() else 'False'
                 else:
                     bool_status.append(f"aux{i-12} {'1' if bool_var.get() else '0'}")
                     self.update_queue[f"aux{i-12}"] = '1' if bool_var.get() else '0'
             
-            # 输出所有布尔值状态，并在最后输出当前心跳数值
-            #print(" | ".join(bool_status), f"Heartbeat: {self.heartbeat_value}")
-            # 检查字典变化并删除不需要的键（仅针对线性值）
-            self.check_and_print_update_queue()
-            time.sleep(1)  # 每秒输出一次布尔值状态
+            time.sleep(0.1)  # 每秒输出一次布尔值状态
 
     def check_and_print_update_queue(self):
         """检查 update_queue 是否发生变化，如果有变化则打印，并摧毁相同键（仅针对线性值）"""
