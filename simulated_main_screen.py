@@ -72,7 +72,7 @@ def run_simulator():
                 print("启动发送信号线程和心跳线程")
                 # 主线程等待关闭信号
                 while not shutdown_event.is_set():
-                    time.sleep(0.5)  # 每0.5s检测一次关闭信号
+                    time.sleep(0.01)  # 每0.5s检测一次关闭信号
                     simulator_mian_screen.update_queue = update_queue
             else:
                 print("启动信号发送失败")
