@@ -28,21 +28,21 @@ class ControlPanel:
 
         # 创建10个布尔值按钮
         self.bool_buttons = []
-        for i in range(19):
+        for i in range(21):
             if i < 8:
                 self.create_bool_button(f"power{i+1}", i+15)
             elif i < 9:
                 continue 
-            elif i < 12:
+            elif i < 14:
                 self.create_bool_button(f"power{i}", i+15)
-            elif i < 13:
-                continue 
             elif i < 15:
-                self.create_bool_button(f"power{i+3}", i+15)
-            elif i < 16:
+                continue 
+            elif i < 17:
+                self.create_bool_button(f"power{i+1}", i+15)
+            elif i < 18:
                 continue 
             else:
-                self.create_bool_button(f"aux{i-15}", i+15)
+                self.create_bool_button(f"aux{i-17}", i+15)
 
         # 创建更新按钮
         self.create_update_button()
@@ -118,7 +118,7 @@ class ControlPanel:
                 self.update_queue[f"action_heartbeat"] = self.heartbeat_value
                 # 检查字典变化并删除不需要的键（仅针对线性值）
                 self.check_and_print_update_queue()
-                time.sleep(2)  # 心跳每秒输出一次
+                time.sleep(0.2)  # 心跳每秒输出一次
         
             # 在循环结束后，确保最后的值是0
             if self.update_queue.get(f"action{i+1}") != 0:
