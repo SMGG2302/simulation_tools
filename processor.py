@@ -7,7 +7,7 @@ import json
 
 class  MainScreenSimulator:
     def __init__(self, broker="127.0.0.1", port=1883, username="", password="",
-                 client_id=None, safe_topic="", control_topic_base="",shutdown_event=None, update_queue=None):
+                 client_id=None, safe_topic="", control_topic_base="",shutdown_event=None, update_queue=None, config_manager=None):
         self.broker=broker
         self.port=port      
         self.username=username
@@ -18,6 +18,7 @@ class  MainScreenSimulator:
         self.shutdown_event=shutdown_event
         self.update_queue=update_queue
         self.client_id=client_id
+        self.config_manager=config_manager
 
         #创建MQTT客户端
         self.is_connected=False   #连接状态
@@ -89,14 +90,19 @@ class  MainScreenSimulator:
         print("已启动发送控制信号和心跳")
         return True
    
+    def time_for_send_signal(self):
+        get_mqtt_protocol_timeouts=self.config_manager.get_mqtt_protocol_timeouts()
+        send_times = get_mqtt_protocol_timeouts.get('heartbeat_detection_interval_sec', 1)
+        return send_times
+    
     #心跳发送功能函数
     def heartbeat_task(self):
         """心跳线程"""
         while self.running and not self.shutdown_event.is_set():
             if self.is_connected:  
                 self.send_heartbeat()    
-                print("已发送心跳") 
-                time.sleep(0.1)     #每2秒发送一次心跳，修改数值可以修改发送速度
+                print(f"当前发送速度: {self.time_for_send_signal()}")
+                time.sleep(self.time_for_send_signal())     #每2秒发送一次心跳，修改数值可以修改发送速度
 
     def send_heartbeat(self):
         """发送心跳"""
@@ -128,37 +134,10 @@ class  MainScreenSimulator:
         send_count=0
         while self.running and not self.shutdown_event.is_set():
             if self.is_connected:  
-                self.update_signal()
                 self.send_control_signals()
                 send_count+=1
                 print(f"已发送{send_count}个控制信号")  
-                time.sleep(0.1)    #每1秒发送一次控制信号
-
-
-        #加载控制信号文件
-    def update_signal(self):
-        """手动控制信号"""
-        try:
-            self.control_signals.update({
-                "action1":129,
-                "action2":130,
-                "action3":127,
-                "action4":127,
-                "action5":127,
-                "action6":127,
-                "power1":True,
-                "power2":False,
-                "power3":False,
-                "power4":False,
-                "power5":False,
-                "power6":False,
-                "power16":False,
-                "power17":1080,
-                "aux1":1,
-                "aux2":0   
-            })
-        except Exception as e:
-             print(f"加载信号文件失败: {e}")
+                time.sleep(self.time_for_send_signal())    #每1秒发送一次控制信号
 
     def send_control_signals(self):
         """发送控制信号"""

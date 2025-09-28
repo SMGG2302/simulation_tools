@@ -7,8 +7,9 @@ import random
 import tkinter as tk
 from tkinter import ttk
 
-from simulation_processor import MainScreenSimulator
+from processor import MainScreenSimulator
 from demo_window import ControlPanel
+from config_manager import ConfigManager
 
 # 全局关闭事件
 shutdown_event = threading.Event()
@@ -43,7 +44,7 @@ def run_gui(stop_flag):
 
     root.mainloop()  # 启动 Tkinter 主循环
 
-def run_simulator(stop_flag):
+def run_simulator(stop_flag, config_manager):
     """启动模拟器"""
     # 生成8位随机后缀（数字+大写字母）
     random_suffix = ''.join(random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=8))
@@ -67,7 +68,8 @@ def run_simulator(stop_flag):
         safe_topic=config["safe_topic"],
         control_topic_base=config["control_topic_base"],
         shutdown_event=shutdown_event,
-        update_queue=update_queue
+        update_queue=update_queue,
+        config_manager = config_manager
     )
 
     try:
@@ -95,6 +97,12 @@ def run_simulator(stop_flag):
         print("资源清理完成，程序退出")
 
 def main():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(base_dir, 'config.json')
+    print(f"断点-- 配置文件路径: {config_path}")
+
+    # 初始化 ConfigManager (它内部会调用 get_logger，但此时 logger 还未配置)
+    config_manager = ConfigManager(config_path=config_path)
     """主函数"""
     stop_flag = threading.Event()  # 创建一个线程事件作为停止标志
 
@@ -102,7 +110,7 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
 
     # 启动模拟器线程
-    simulator_thread = threading.Thread(target=run_simulator, args=(stop_flag,))
+    simulator_thread = threading.Thread(target=run_simulator, args=(stop_flag,config_manager))
     simulator_thread.daemon = True  # 守护线程，程序退出时自动清理
     simulator_thread.start()
 
