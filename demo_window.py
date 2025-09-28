@@ -144,15 +144,15 @@ class ControlPanel:
         while True:
             bool_status = []
             for i, bool_var in enumerate(self.bool_buttons):
-                if i < 11:
+                if i < 13:
                     bool_status.append(f"power{i+1} {'True' if bool_var.get() else 'False'}")
                     self.update_queue[f"power{i+1}"] = 'True' if bool_var.get() else 'False'
-                elif i < 13:
-                    bool_status.append(f"power{i+5} {'True' if bool_var.get() else 'False'}")
-                    self.update_queue[f"power{i+5}"] = 'True' if bool_var.get() else 'False'
+                elif i < 15:
+                    bool_status.append(f"power{i+3} {'True' if bool_var.get() else 'False'}")
+                    self.update_queue[f"power{i+3}"] = 'True' if bool_var.get() else 'False'
                 else:
-                    bool_status.append(f"aux{i-12} {'1' if bool_var.get() else '0'}")
-                    self.update_queue[f"aux{i-12}"] = '1' if bool_var.get() else '0'
+                    bool_status.append(f"aux{i-14} {'1' if bool_var.get() else '0'}")
+                    self.update_queue[f"aux{i-14}"] = '1' if bool_var.get() else '0'
             
             time.sleep(0.1)  # 每秒输出一次布尔值状态
 
