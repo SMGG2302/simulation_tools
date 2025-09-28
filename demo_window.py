@@ -28,21 +28,21 @@ class ControlPanel:
 
         # 创建10个布尔值按钮
         self.bool_buttons = []
-        for i in range(19):
+        for i in range(21):
             if i < 8:
                 self.create_bool_button(f"power{i+1}", i+15)
             elif i < 9:
                 continue 
-            elif i < 12:
+            elif i < 14:
                 self.create_bool_button(f"power{i}", i+15)
-            elif i < 13:
-                continue 
             elif i < 15:
-                self.create_bool_button(f"power{i+3}", i+15)
-            elif i < 16:
+                continue 
+            elif i < 17:
+                self.create_bool_button(f"power{i+1}", i+15)
+            elif i < 18:
                 continue 
             else:
-                self.create_bool_button(f"aux{i-15}", i+15)
+                self.create_bool_button(f"aux{i-17}", i+15)
 
         # 创建更新按钮
         self.create_update_button()
@@ -144,15 +144,15 @@ class ControlPanel:
         while True:
             bool_status = []
             for i, bool_var in enumerate(self.bool_buttons):
-                if i < 11:
+                if i < 13:
                     bool_status.append(f"power{i+1} {'True' if bool_var.get() else 'False'}")
                     self.update_queue[f"power{i+1}"] = 'True' if bool_var.get() else 'False'
-                elif i < 13:
-                    bool_status.append(f"power{i+5} {'True' if bool_var.get() else 'False'}")
-                    self.update_queue[f"power{i+5}"] = 'True' if bool_var.get() else 'False'
+                elif i < 15:
+                    bool_status.append(f"power{i+3} {'True' if bool_var.get() else 'False'}")
+                    self.update_queue[f"power{i+3}"] = 'True' if bool_var.get() else 'False'
                 else:
-                    bool_status.append(f"aux{i-12} {'1' if bool_var.get() else '0'}")
-                    self.update_queue[f"aux{i-12}"] = '1' if bool_var.get() else '0'
+                    bool_status.append(f"aux{i-14} {'1' if bool_var.get() else '0'}")
+                    self.update_queue[f"aux{i-14}"] = '1' if bool_var.get() else '0'
             
             time.sleep(0.1)  # 每秒输出一次布尔值状态
 
