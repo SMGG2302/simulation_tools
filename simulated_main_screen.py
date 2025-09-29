@@ -26,7 +26,7 @@ def run_gui(stop_flag):
     """启动 Tkinter GUI"""
     root = tk.Tk()
     panel = ControlPanel(root)
-
+    
     def check_update_queue():
         global update_queue  # 在函数内部使用全局变量 update_queue
         update_queue = panel.update_queue  # 获取 update_queue
