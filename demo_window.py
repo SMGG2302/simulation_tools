@@ -31,6 +31,10 @@ class ControlPanel:
         self.right_frame.grid_propagate(False)  # 防止框架大小根据子组件调整
 
         # 在右框架中放置一个按钮
+        button = ttk.Button(self.left_frame, text="点击按钮可以回到中值")
+        button.grid(row=0, column=0)
+
+        # 在右框架中放置一个按钮
         button = ttk.Button(self.right_frame, text="Power bool")
         button.grid(row=0, column=0)
 
@@ -42,7 +46,7 @@ class ControlPanel:
         self.previous_update_queue = {}  # 上次的更新字典
         self.bool_buttons = []  # 存储布尔按钮
 
-        row = 0  # 初始行号
+        row = 1  # 初始行号
         for i in range(8):  # 创建 8 对滑动条和布尔开关
             self.create_slider(f"Action{i+1}", row)  # 创建滑动条
             row += 1
@@ -71,10 +75,6 @@ class ControlPanel:
         self.heartbeat_thread.start()
 
     def create_slider(self, label, row):
-        """创建滑动条和标签"""
-        label_widget = ttk.Label(self.left_frame, text=label)
-        label_widget.grid(row=row, column=0, sticky="w", padx=5)
-
         # 创建滑动条
         slider = tk.Scale(self.left_frame, from_=0, to=255, orient="horizontal", command=self.update_slider_value)
         slider.set(127)  # 默认初始值为50
@@ -83,6 +83,9 @@ class ControlPanel:
         # 创建当前值标签
         current_val_label = ttk.Label(self.left_frame, text="127")  # 初始值为50
         current_val_label.grid(row=row+1, column=1, pady=5)
+
+        label_widget = ttk.Button(self.left_frame, text=label, command=lambda s=slider, label = current_val_label: self.reset_slider(s, label))
+        label_widget.grid(row=row, column=0, sticky="s", padx=5)
 
         self.sliders.append(slider)
         self.slider_labels.append(current_val_label)
@@ -170,3 +173,7 @@ class ControlPanel:
         """获取 update_queue 字典"""
         return self.update_queue.copy()
 
+    def reset_slider(self, slider, label):
+        """重置滑动条到中值并更新标签"""
+        slider.set(127)  # 设置滑动条为中值
+        label.config(text="127")  # 更新标签为中值
