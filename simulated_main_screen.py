@@ -46,27 +46,8 @@ def run_gui(stop_flag):
 
 def run_simulator(stop_flag, config_manager):
     """启动模拟器"""
-    # 生成8位随机后缀（数字+大写字母）
-    random_suffix = ''.join(random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=8))
-    config = {
-        "broker": "127.0.0.1",
-        "port": 1883,
-        "username": "device5_client",
-        "password": "111test",
-        "control_topic_base": "LSVHJ133022221762/ctrl/",
-        "safe_topic": "touch_screen/heartbeat",
-        "client_id": f"main_screen_sim_{random_suffix}"
-    }
-
     # 创建大屏模拟器对象
     simulator_mian_screen = MainScreenSimulator(
-        broker=config["broker"],
-        port=config["port"],
-        username=config["username"],
-        password=config["password"],
-        client_id=config["client_id"],
-        safe_topic=config["safe_topic"],
-        control_topic_base=config["control_topic_base"],
         shutdown_event=shutdown_event,
         update_queue=update_queue,
         config_manager = config_manager

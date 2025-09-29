@@ -6,18 +6,10 @@ import json
 
 
 class  MainScreenSimulator:
-    def __init__(self, broker="127.0.0.1", port=1883, username="", password="",
-                 client_id=None, safe_topic="", control_topic_base="",shutdown_event=None, update_queue=None, config_manager=None):
-        self.broker=broker
-        self.port=port      
-        self.username=username
-        self.password=password
-        self.safe_topic=safe_topic
-        self.control_topic_base=control_topic_base
+    def __init__(self, shutdown_event=None, update_queue=None, config_manager=None):
         self.Flag_mqttConnected=0
         self.shutdown_event=shutdown_event
         self.update_queue=update_queue
-        self.client_id=client_id
         self.config_manager=config_manager
 
         #创建MQTT客户端
@@ -36,13 +28,26 @@ class  MainScreenSimulator:
     #连接MQTT服务器
     def connect(self):
         try:
+            current_mqtt_config = self.config_manager.get_mqtt_config() # 获取最新配置
+            broker = current_mqtt_config['broker']
+            port = current_mqtt_config.get('port', 1883)
+            username = current_mqtt_config['username']
+            print(f"MQTT连接配置: {broker}:{port} - {username}")
+            password = current_mqtt_config['password']
+            client_id_prefix = current_mqtt_config.get('client_id_prefix', 'excavator_ctrl_')
+            self.safe_topic = current_mqtt_config['safe_topic']
+            self.control_topic_base = current_mqtt_config['control_topic_base']
+
+            random_suffix = ''.join(random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=8))
+            self.client_id = client_id_prefix + random_suffix
+
             self.client=mqtt.Client(client_id=self.client_id, clean_session=True)
             self.client.on_connect=self.on_connect                        #设置连接MQTT服务器的回调函数
             self.client.on_disconnect=self.on_disconnect                  #设置断开MQTT服务器的回调函数
-            if self.username and self.password:
-                self.client.username_pw_set(self.username, self.password)   #添加用户名和密码
+            if username and password:
+                self.client.username_pw_set(username, password)   #添加用户名和密码
             
-            result= self.client.connect(self.broker, self.port, 60) #连接MQTT
+            result= self.client.connect(broker, port, 60) #连接MQTT
             
             if result != mqtt.MQTT_ERR_SUCCESS:
                  print(f"连接MQTT返回错误码: {result.name}({result.value})")
@@ -95,6 +100,9 @@ class  MainScreenSimulator:
         send_times = get_mqtt_protocol_timeouts.get('heartbeat_detection_interval_sec', 1)
         return send_times
     
+    def get_config_manager(self):
+        return self.config_manager
+    
     #心跳发送功能函数
     def heartbeat_task(self):
         """心跳线程"""
@@ -120,7 +128,7 @@ class  MainScreenSimulator:
                 retain=False
             )
             if result == mqtt.MQTT_ERR_SUCCESS:
-                print(f"已发送心跳: {self.heartbeat_value}")
+                print(f"已发送心跳: {self.heartbeat_value} - {self.safe_topic}")
             else:
                 print(f"发送心跳失败: {result}")
                 return False

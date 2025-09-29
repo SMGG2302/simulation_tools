@@ -1,7 +1,7 @@
 {
   "simulation_mode": false,
   "mqtt": {
-    "broker": "10.201.50.104",
+    "broker": "127.0.0.1",
     "simulation_broker": "10.201.50.104",
     "port": 1883,
     "keepalive": 3,

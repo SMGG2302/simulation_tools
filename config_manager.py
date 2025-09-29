@@ -121,21 +121,28 @@ class ConfigManager:
         """替换字符串中的占位符"""
         if not isinstance(text, str):
             return text
-        
+    
         device_config = self.config.get('mqtt', {}).get('device_config', {})
-        device_serial = device_config.get('device_serial', '2')
-        
-        # 先替换 device_serial 占位符
+        raw_device_serial = device_config.get('device_serial', '2')
+
+        # 判断 text 中是否包含 {excavator_id}
+        if '{excavator_id}' in text:
+            device_serial = str(int(raw_device_serial))        # 正常 device_serial
+        else:
+            device_serial = str(int(raw_device_serial) + 2)    # device_serial + 2
+
+        # 替换 {device_serial}
         text = text.replace('{device_serial}', device_serial)
-        
-        # 获取 excavator_id 并替换其中的占位符
+
+        # 构造 excavator_id
         excavator_id_template = device_config.get('excavator_id', 'LSVHJ133022221762')
         excavator_id = excavator_id_template.replace('{device_serial}', device_serial)
-        
-        # 然后替换 excavator_id 占位符
+
+        # 替换 {excavator_id}
         text = text.replace('{excavator_id}', excavator_id)
-        
+
         return text
+
 
     def get(self, key, default=None):
         """获取顶层配置项"""
