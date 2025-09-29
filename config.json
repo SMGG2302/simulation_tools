@@ -76,7 +76,7 @@
       "reconnect_min_delay_sec": 20,
       "reconnect_max_delay_sec": 40,
       "clean_session": true,
-      "heartbeat_detection_interval_sec":1
+      "heartbeat_detection_interval_sec": 1
     }
   },
   "protocol_file": "protocol.json"

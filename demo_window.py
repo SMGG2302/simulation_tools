@@ -39,6 +39,7 @@ class ControlPanel:
         button.grid(row=0, column=0)
 
         self.max_val = 255  # 最大值
+        self.current_gear = 1  # 初始挡位设置为1
         self.sliders = []  # 存储滑动条
         self.slider_labels = []  # 存储滑动条标签
         self.max_min_switches = []  # 存储布尔开关
@@ -54,9 +55,11 @@ class ControlPanel:
             row += 1
 
         # 创建布尔值按钮
-        for i in range(20):
-            if i < 17:
+        for i in range(21):
+            if i < 16:
                 self.create_bool_button(f"power{i+1}", i+15)
+            elif i == 16:
+                continue
             else:
                 self.create_bool_button(f"aux{i-17}", i+15)
 
@@ -73,6 +76,18 @@ class ControlPanel:
         self.heartbeat_thread.daemon = True
         self.heartbeat_value = 0  # 初始心跳值
         self.heartbeat_thread.start()
+
+        # 创建换挡的滑动条（模拟换挡杆）
+        self.gear_slider = tk.Scale(self.right_frame, from_=1, to=6, orient="horizontal", length=200, sliderlength=20)
+        self.gear_slider.set(1)  # 默认设置为 1 档
+        self.gear_slider.grid(row=22, column=0, padx=0, pady=0)
+
+        # 添加标签，显示当前档位
+        self.gear_label = ttk.Label(self.right_frame, text="Power17")
+        self.gear_label.grid(row=21, column=0, padx=10, pady=0)
+
+        # 设置滑动条事件监听，更新标签显示当前档位
+        self.gear_slider.bind("<Motion>", self.update_gear)
 
     def create_slider(self, label, row):
         # 创建滑动条
@@ -153,9 +168,11 @@ class ControlPanel:
         while True:
             bool_status = []
             for i, bool_var in enumerate(self.bool_buttons):
-                if i < 17:
+                if i < 16:
                     bool_status.append(f"power{i+1} {'True' if bool_var.get() else 'False'}")
                     self.update_queue[f"power{i+1}"] = 'True' if bool_var.get() else 'False'
+                elif i == 16:
+                    continue
                 else:
                     bool_status.append(f"aux{i-16} {'1' if bool_var.get() else '0'}")
                     self.update_queue[f"aux{i-16}"] = '1' if bool_var.get() else '0'
@@ -177,3 +194,10 @@ class ControlPanel:
         """重置滑动条到中值并更新标签"""
         slider.set(127)  # 设置滑动条为中值
         label.config(text="127")  # 更新标签为中值
+
+
+    def update_gear(self, event):
+        """更新档位标签显示"""
+        self.current_gear = self.gear_slider.get()
+        self.gear_label.config(text=f"Power17：{int(self.current_gear)}")
+        self.update_queue["power17"] = self.current_gear  # 更新 update_queue 字典
