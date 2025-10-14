@@ -3,6 +3,7 @@ import random
 import threading
 import time
 import json
+import sys
 
 
 class  MainScreenSimulator:
@@ -56,9 +57,9 @@ class  MainScreenSimulator:
             self.client.loop_start()          #启动MQTT客户端
             timeout = 10
             start_time = time.time()
-            while not self.is_connected:
+            while not self.is_connected and (time.time() - start_time) < timeout:
                 time.sleep(0.1)
-                if (time.time() - start_time) < timeout:
+                if not self.is_connected:
                     print("MQTT连接暂未超时，继续等待")  
         
             return self.is_connected         #返回连接状态
@@ -86,10 +87,12 @@ class  MainScreenSimulator:
         self.running=True
         #启动心跳线程
         self.heartbeat_thread=threading.Thread(target=self.heartbeat_task,name="heartbeat_thread")
+        self.heartbeat_thread.daemon = True
         self.heartbeat_thread.start()
 
         #启动控制线程
         self.control_thread=threading.Thread(target=self.control_task,name="control_thread")
+        self.control_thread.daemon = True
         self.control_thread.start()
 
         print("已启动发送控制信号和心跳")
@@ -110,7 +113,14 @@ class  MainScreenSimulator:
             if self.is_connected:  
                 self.send_heartbeat()    
                 print(f"当前发送速度: {self.time_for_send_signal()}")
-                time.sleep(self.time_for_send_signal())     #每2秒发送一次心跳，修改数值可以修改发送速度
+            # 检查是否需要退出
+            if self.shutdown_event.is_set():
+                break
+            # 使用较小的时间片以便更及时地响应关闭信号
+            for _ in range(int(self.time_for_send_signal() / 0.1)):
+                if self.shutdown_event.is_set():
+                    break
+                time.sleep(0.1)
 
     def send_heartbeat(self):
         """发送心跳"""
@@ -145,7 +155,14 @@ class  MainScreenSimulator:
                 self.send_control_signals()
                 send_count+=1
                 print(f"已发送{send_count}个控制信号")  
-                time.sleep(self.time_for_send_signal())    #每1秒发送一次控制信号
+            # 检查是否需要退出
+            if self.shutdown_event.is_set():
+                break
+            # 使用较小的时间片以便更及时地响应关闭信号
+            for _ in range(int(self.time_for_send_signal() / 0.1)):
+                if self.shutdown_event.is_set():
+                    break
+                time.sleep(0.1)
 
     def send_control_signals(self):
         """发送控制信号"""
@@ -155,16 +172,20 @@ class  MainScreenSimulator:
         
         try:
             #发送控制信号
-            success_conut=0
-            for signal_name, signal_value in self.update_queue.items():
-                topic=f"{self.control_topic_base}{signal_name}"
-                payload=str(signal_value)                                  #话题实际内容
-                result,_=self.client.publish(topic, payload, qos=0, retain=False)
-                if result==mqtt.MQTT_ERR_SUCCESS:
-                    print(f"已发送控制信号: {topic} - {payload}")
-                    success_conut+=1
-                else:
-                    print(f"发送控制信号失败")
+            success_count=0
+            if self.update_queue:
+                for signal_name, signal_value in self.update_queue.items():
+                    # 检查是否需要退出
+                    if self.shutdown_event.is_set():
+                        break
+                    topic=f"{self.control_topic_base}{signal_name}"
+                    payload=str(signal_value)                                  #话题实际内容
+                    result,_=self.client.publish(topic, payload, qos=0, retain=False)
+                    if result==mqtt.MQTT_ERR_SUCCESS:
+                        print(f"已发送控制信号: {topic} - {payload}")
+                        success_count+=1
+                    else:
+                        print(f"发送控制信号失败")
         except Exception as e:
             print(f"发送控制信号时发生错误: {e}")
             return False
@@ -173,18 +194,19 @@ class  MainScreenSimulator:
     '''手动断连功能函数'''
     def disconnect(self):
         if self.client:
-         self.client.loop_stop()
-         self.client.disconnect()
-         print("MQTT客户端已断开连接") 
+            self.client.loop_stop()
+            self.client.disconnect()
+            print("MQTT客户端已断开连接") 
     
     def stop_send_signal(self):
         """停止发送控制信号和心跳"""
+        print("正在停止发送信号...")
         self.running=False
-        if self.heartbeat_thread:
-            self.heartbeat_thread.join(timeout=1)      #join()函数等待线程结束，等待1s
-        if self.control_thread:
+        
+        # 等待线程结束，但设置超时时间
+        if self.heartbeat_thread and self.heartbeat_thread.is_alive():
+            self.heartbeat_thread.join(timeout=1)
+        if self.control_thread and self.control_thread.is_alive():
             self.control_thread.join(timeout=1)
+            
         print("已停止发送信号和心跳")
-
-    
-                         
