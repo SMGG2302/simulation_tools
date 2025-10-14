@@ -1,8 +1,23 @@
 import json
 import os
+import sys
 import threading
 
 class ConfigError(Exception):
+    """自定义配置错误异常"""
+    pass
+
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，用于处理PyInstaller打包后的路径问题"""
+    try:
+        # PyInstaller创建临时文件夹，将路径存储在_MEIPASS中
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+class ConfigManager:
     """自定义配置错误异常"""
     pass
 
@@ -34,7 +49,12 @@ class ConfigManager:
                 # 如果 config_path 也没有目录 (例如直接运行 `python main.py` 且 config 在当前目录)
                 # 则 protocol_path 也是相对于当前工作目录
                 protocol_path = os.path.abspath(protocol_path)
-
+            else:
+                # 处理外部配置文件情况：当程序被打包（如PyInstaller），并且protocol_path是绝对路径时，
+                # 将其基础目录替换为exe所在目录，以确保能正确访问同级目录下的外部文件。
+                if getattr(sys, 'frozen', False):
+                    exe_dir = os.path.dirname(sys.executable)
+                    protocol_path = os.path.join(exe_dir, os.path.basename(protocol_path))
 
         self.protocol_path = protocol_path
         self.protocol = self._load_json(protocol_path, "协议定义")

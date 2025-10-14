@@ -78,8 +78,20 @@ def run_simulator(stop_flag, config_manager):
         print("资源清理完成，程序退出")
 
 def main():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(base_dir, 'config.json')
+    def get_external_resource_path(relative_path):
+        """获取exe文件所在目录的资源文件路径"""
+        # 获取exe文件所在目录
+        if getattr(sys, 'frozen', False):
+            # 如果是打包后的exe文件
+            application_path = os.path.dirname(sys.executable)
+        else:
+            # 如果是正常运行的Python脚本
+            application_path = os.path.dirname(os.path.abspath(__file__))
+        
+        return os.path.join(application_path, relative_path)
+
+    # 使用get_external_resource_path函数来获取exe所在目录的配置文件路径
+    config_path = get_external_resource_path('config.json')
     print(f"断点-- 配置文件路径: {config_path}")
 
     # 初始化 ConfigManager (它内部会调用 get_logger，但此时 logger 还未配置)
