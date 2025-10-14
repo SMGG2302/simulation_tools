@@ -1,8 +1,8 @@
 {
   "simulation_mode": false,
   "mqtt": {
-    "broker": "127.0.0.1",
-    "simulation_broker": "10.201.50.104",
+    "broker": "broker.emqx.io",
+    "simulation_broker": "broker.emqx.io",
     "port": 1883,
     "keepalive": 3,
     "username": "device{device_serial}_client",

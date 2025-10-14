@@ -30,19 +30,30 @@ def run_gui(stop_flag):
     def check_update_queue():
         global update_queue  # 在函数内部使用全局变量 update_queue
         update_queue = panel.update_queue  # 获取 update_queue
-        root.after(100, check_update_queue)  # 每300ms调用一次
+        if not stop_flag.is_set():
+            root.after(100, check_update_queue)  # 每100ms调用一次
 
     check_update_queue()  # 启动定时器
 
     # 假设当GUI关闭时，stop_flag 会被设置
     def on_close():
+        print("正在关闭GUI...")
         stop_flag.set()  # 设置停止标志
-        root.quit()  # 退出主循环
-        root.destroy()  # 销毁根窗口
+        try:
+            root.quit()  # 退出主循环
+        except:
+            pass
+        try:
+            root.destroy()  # 销毁根窗口
+        except:
+            pass
 
     root.protocol("WM_DELETE_WINDOW", on_close)  # 当窗口关闭时，设置停止标志并退出
 
-    root.mainloop()  # 启动 Tkinter 主循环
+    try:
+        root.mainloop()  # 启动 Tkinter 主循环
+    except Exception as e:
+        print(f"GUI运行时发生错误: {e}")
 
 def run_simulator(stop_flag, config_manager):
     """启动模拟器"""
@@ -73,9 +84,13 @@ def run_simulator(stop_flag, config_manager):
 
     finally:
         print("正在清理资源...")
-        simulator_mian_screen.stop_send_signal()
-        simulator_mian_screen.disconnect()
+        try:
+            simulator_mian_screen.stop_send_signal()
+            simulator_mian_screen.disconnect()
+        except Exception as e:
+            print(f"清理资源时发生错误: {e}")
         print("资源清理完成，程序退出")
+
 def get_external_resource_path(relative_path):
     """获取exe文件所在目录的资源文件路径"""
     # 获取exe文件所在目录
@@ -118,7 +133,16 @@ def main():
     except KeyboardInterrupt:
         print("捕获到键盘中断，退出程序")
         stop_flag.set()  # 设置 stop_flag，通知所有线程停止
+        # 等待线程结束
+        gui_thread.join(timeout=2)
+        simulator_thread.join(timeout=2)
         exit(0)
+    except Exception as e:
+        print(f"等待线程结束时发生错误: {e}")
+    finally:
+        # 确保设置停止标志
+        stop_flag.set()
+        print("程序已退出")
 
 if __name__ == "__main__":
     main()
