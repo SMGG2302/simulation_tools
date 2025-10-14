@@ -39,6 +39,7 @@ def run_gui(stop_flag):
     def on_close():
         print("正在关闭GUI...")
         stop_flag.set()  # 设置停止标志
+        shutdown_event.set()  # 同时设置全局关闭事件
         try:
             root.quit()  # 退出主循环
         except:
@@ -52,6 +53,9 @@ def run_gui(stop_flag):
 
     try:
         root.mainloop()  # 启动 Tkinter 主循环
+        # 主循环结束后确保设置停止标志
+        stop_flag.set()
+        shutdown_event.set()
     except Exception as e:
         print(f"GUI运行时发生错误: {e}")
 
@@ -71,7 +75,7 @@ def run_simulator(stop_flag, config_manager):
             if simulator_mian_screen.start_send_signal():
                 print("启动发送信号线程和心跳线程")
                 # 主线程等待关闭信号
-                while not stop_flag.is_set():  # 检查 stop_flag 是否被设置
+                while not stop_flag.is_set() and not shutdown_event.is_set():  # 检查 stop_flag 是否被设置
                     time.sleep(0.01)  # 每0.01秒检测一次关闭信号
                     simulator_mian_screen.update_queue = update_queue
             else:
@@ -129,20 +133,27 @@ def main():
     # 等待线程结束
     try:
         gui_thread.join()
-        simulator_thread.join()
+        simulator_thread.join(timeout=2)  # 设置超时时间
     except KeyboardInterrupt:
         print("捕获到键盘中断，退出程序")
         stop_flag.set()  # 设置 stop_flag，通知所有线程停止
+        shutdown_event.set()  # 设置全局关闭事件
         # 等待线程结束
-        gui_thread.join(timeout=2)
-        simulator_thread.join(timeout=2)
+        gui_thread.join(timeout=1)
+        simulator_thread.join(timeout=1)
         exit(0)
     except Exception as e:
         print(f"等待线程结束时发生错误: {e}")
     finally:
         # 确保设置停止标志
         stop_flag.set()
+        shutdown_event.set()
         print("程序已退出")
+        # 强制退出程序
+        try:
+            os._exit(0)
+        except:
+            pass
 
 if __name__ == "__main__":
     main()

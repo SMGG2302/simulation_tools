@@ -87,10 +87,12 @@ class  MainScreenSimulator:
         self.running=True
         #启动心跳线程
         self.heartbeat_thread=threading.Thread(target=self.heartbeat_task,name="heartbeat_thread")
+        self.heartbeat_thread.daemon = True
         self.heartbeat_thread.start()
 
         #启动控制线程
         self.control_thread=threading.Thread(target=self.control_task,name="control_thread")
+        self.control_thread.daemon = True
         self.control_thread.start()
 
         print("已启动发送控制信号和心跳")
@@ -114,7 +116,11 @@ class  MainScreenSimulator:
             # 检查是否需要退出
             if self.shutdown_event.is_set():
                 break
-            time.sleep(self.time_for_send_signal())     #每2秒发送一次心跳，修改数值可以修改发送速度
+            # 使用较小的时间片以便更及时地响应关闭信号
+            for _ in range(int(self.time_for_send_signal() / 0.1)):
+                if self.shutdown_event.is_set():
+                    break
+                time.sleep(0.1)
 
     def send_heartbeat(self):
         """发送心跳"""
@@ -152,7 +158,11 @@ class  MainScreenSimulator:
             # 检查是否需要退出
             if self.shutdown_event.is_set():
                 break
-            time.sleep(self.time_for_send_signal())    #每1秒发送一次控制信号
+            # 使用较小的时间片以便更及时地响应关闭信号
+            for _ in range(int(self.time_for_send_signal() / 0.1)):
+                if self.shutdown_event.is_set():
+                    break
+                time.sleep(0.1)
 
     def send_control_signals(self):
         """发送控制信号"""
@@ -190,9 +200,13 @@ class  MainScreenSimulator:
     
     def stop_send_signal(self):
         """停止发送控制信号和心跳"""
+        print("正在停止发送信号...")
         self.running=False
+        
+        # 等待线程结束，但设置超时时间
         if self.heartbeat_thread and self.heartbeat_thread.is_alive():
-            self.heartbeat_thread.join(timeout=1)      #join()函数等待线程结束，等待1s
+            self.heartbeat_thread.join(timeout=1)
         if self.control_thread and self.control_thread.is_alive():
             self.control_thread.join(timeout=1)
+            
         print("已停止发送信号和心跳")

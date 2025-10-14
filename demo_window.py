@@ -141,6 +141,7 @@ class ControlPanel:
 
     def on_closing(self):
         """处理窗口关闭事件"""
+        print("收到窗口关闭请求")
         # 标记程序正在关闭
         self.closing = True
         
@@ -149,7 +150,11 @@ class ControlPanel:
             self.text_redirector.close()
         
         # 退出程序
-        self.root.destroy()
+        try:
+            self.root.quit()
+            self.root.destroy()
+        except Exception as e:
+            print(f"关闭窗口时发生错误: {e}")
 
     def create_slider(self, label, parent):
         # 创建滑动条框架
