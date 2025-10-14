@@ -44,7 +44,7 @@ class TextRedirector:
 class ControlPanel:
     def __init__(self, root):
         self.root = root
-        root.geometry("1000x700")  # 调整窗口大小，更宽一些以容纳所有控件
+        self.root.geometry("1000x700")  # 调整窗口大小，更宽一些以容纳所有控件
         self.root.title("模拟操作台")
         
         # 标记程序是否正在关闭
@@ -55,9 +55,9 @@ class ControlPanel:
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # 设置主框架的行列配置
-        self.main_frame.grid_columnconfigure(0, weight=3)  # 左侧区域权重
-        self.main_frame.grid_columnconfigure(1, weight=3)  # 中间区域权重
-        self.main_frame.grid_columnconfigure(2, weight=2, minsize=300)  # 右侧日志区域最小宽度300
+        self.main_frame.grid_columnconfigure(0, weight=3,minsize=150)  # 左侧区域权重
+        self.main_frame.grid_columnconfigure(1, weight=3,minsize=150)  # 中间区域权重
+        self.main_frame.grid_columnconfigure(2, weight=1, minsize=300)  # 右侧日志区域最小宽度300
         self.main_frame.grid_rowconfigure(0, weight=1)     # 垂直方向扩展
 
         # 创建左框架
