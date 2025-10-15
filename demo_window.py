@@ -44,7 +44,7 @@ class TextRedirector:
 class ControlPanel:
     def __init__(self, root):
         self.root = root
-        self.root.geometry("1000x700")  # 调整窗口大小，更宽一些以容纳所有控件
+        self.root.geometry("1000x800")  # 调整窗口大小，更宽一些以容纳所有控件
         self.root.title("模拟操作台")
         
         # 标记程序是否正在关闭
@@ -54,32 +54,43 @@ class ControlPanel:
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+        # 创建顶部功能按钮框架
+        self.top_frame = ttk.Frame(self.main_frame)
+        self.top_frame.grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+
+        # 添加一些示例功能按钮
+        self.create_top_button("开始测试", self.start_test)
+        self.create_top_button("停止测试", self.stop_test)
+        self.create_top_button("重置参数", self.reset_parameters)
+        self.create_top_button("导出日志", self.export_logs)
+
         # 设置主框架的行列配置
-        self.main_frame.grid_columnconfigure(0, weight=3,minsize=150)  # 左侧区域权重
-        self.main_frame.grid_columnconfigure(1, weight=3,minsize=150)  # 中间区域权重
+        self.main_frame.grid_columnconfigure(0, weight=3, minsize=150)  # 左侧区域权重
+        self.main_frame.grid_columnconfigure(1, weight=3, minsize=150)  # 中间区域权重
         self.main_frame.grid_columnconfigure(2, weight=1, minsize=300)  # 右侧日志区域最小宽度300
-        self.main_frame.grid_rowconfigure(0, weight=1)     # 垂直方向扩展
+        self.main_frame.grid_rowconfigure(1, weight=1)     # 垂直方向扩展，注意行号变为1
 
         # 创建左框架
         self.left_frame = ttk.Frame(self.main_frame)
-        self.left_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        self.left_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
 
         # 创建中框架
         self.middle_frame = ttk.Frame(self.main_frame)
-        self.middle_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
+        self.middle_frame.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
 
         # 创建右侧日志框架
         self.log_frame = ttk.Frame(self.main_frame)
-        self.log_frame.grid(row=0, column=2, padx=5, pady=5, sticky="nsew")
+        self.log_frame.grid(row=1, column=2, padx=5, pady=5, sticky="nsew")
 
         # 在左框架中放置一个按钮
-        button = ttk.Button(self.left_frame, text="点击按钮可以回到中值")
+        button = ttk.Button(self.left_frame, text="点击左侧按钮可以回到中值")
         button.pack(pady=5)
 
         # 在中框架中放置一个按钮
         button = ttk.Button(self.middle_frame, text="Power bool")
         button.pack(pady=5)
 
+        # 初始化滑动条参数
         self.max_val = 255  # 最大值
         self.current_gear = 1  # 初始挡位设置为1
         self.sliders = []  # 存储滑动条
@@ -138,6 +149,27 @@ class ControlPanel:
 
         # 绑定窗口关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def create_top_button(self, text, command):
+        """创建顶部功能按钮"""
+        button = ttk.Button(self.top_frame, text=text, command=command)
+        button.pack(side=tk.LEFT, padx=5, pady=5)
+
+    def start_test(self):
+        """开始测试功能"""
+        print("开始测试...")
+
+    def stop_test(self):
+        """停止测试功能"""
+        print("停止测试...")
+
+    def reset_parameters(self):
+        """重置参数功能"""
+        print("重置参数...")
+
+    def export_logs(self):
+        """导出日志功能"""
+        print("导出日志...")
 
     def on_closing(self):
         """处理窗口关闭事件"""
@@ -308,3 +340,4 @@ class ControlPanel:
         self.current_gear = self.gear_slider.get()
         self.gear_label.config(text=f"Power17：{int(self.current_gear)}")
         self.update_queue["power17"] = self.current_gear  # 更新 update_queue 字典
+
