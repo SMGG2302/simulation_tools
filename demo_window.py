@@ -28,13 +28,34 @@ class TextRedirector:
         # 检查组件是否还存在
         try:
             if not self.closed and self.widget.winfo_exists():
+                # 先判断插入前是否已经在末尾，只有在末尾时才自动滚动到末尾
+                at_end_before = self.is_log_at_end()
                 self.widget.configure(state='normal')
                 self.widget.insert(tk.END, str)
                 self.widget.configure(state='disabled')
-                self.widget.see(tk.END)
+                if at_end_before:
+                    # 如果之前已经在末尾，插入新内容后保持跟随最新内容
+                    self.widget.see(tk.END)
+                # 否则保持当前滚动位置（不强制滚到底部）
         except:
             pass
 
+    def is_log_at_end(self):
+        """
+        检查日志文本是否在最新位置（末尾）
+        返回 True 如果在末尾，否则返回 False
+        """
+        # 获取当前视图的滚动位置
+        # yview() 返回一个包含两个元素的元组: (top_position, bottom_position)
+        # 如果 bottom_position >= 1.0，则表示视图在文本末尾
+        try:
+            yview_pos = self.widget.yview()
+            # yview_pos[1] 表示视图底部相对于整个文本的位置（0.0 到 1.0）
+            # 使用接近 1.0 的阈值来判断是否在末尾，容忍浮点误差
+            return yview_pos[1] >= 0.99
+        except:
+            return True  # 出错时默认认为在末尾以便跟随最新日志
+    
     def close(self):
         self.closed = True
 

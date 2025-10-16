@@ -117,6 +117,7 @@ def main():
     """主函数"""
     stop_flag = threading.Event()  # 创建一个线程事件作为停止标志
 
+    # 注册信号处理函数
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
