@@ -69,19 +69,36 @@ def run_simulator(stop_flag, config_manager):
     )
 
     try:
-        print("正在连接MQTT...")
-        if simulator_mian_screen.connect():
-            print("连接MQTT成功")
-            if simulator_mian_screen.start_send_signal():
-                print("启动发送信号线程和心跳线程")
-                # 主线程等待关闭信号
-                while not stop_flag.is_set() and not shutdown_event.is_set():  # 检查 stop_flag 是否被设置
-                    time.sleep(0.01)  # 每0.01秒检测一次关闭信号
-                    simulator_mian_screen.update_queue = update_queue
-            else:
-                print("启动信号发送失败")
-        else:
-            print("连接MQTT失败")
+        print("等待 GUI 发起开始测试 (_start_mqtt) 请求...")
+        # 循环等待 GUI 发起开始请求，支持重复开始/停止
+        while not stop_flag.is_set() and not shutdown_event.is_set():
+            try:
+                # 更新共享的引用
+                simulator_mian_screen.update_queue = update_queue
+
+                # 如果 GUI 请求开始且当前未连接，启动连接并发送线程
+                if simulator_mian_screen.update_queue and simulator_mian_screen.update_queue.get('_start_mqtt'):
+                    print("收到开始请求，尝试连接 MQTT...")
+                    # 清理开始请求标志以避免重复连接
+                    try:
+                        del simulator_mian_screen.update_queue['_start_mqtt']
+                    except:
+                        pass
+
+                    if simulator_mian_screen.connect():
+                        print("连接MQTT成功")
+                        if simulator_mian_screen.start_send_signal():
+                            print("启动发送信号线程和心跳线程")
+                        else:
+                            print("启动信号发送失败")
+                    else:
+                        print("连接MQTT失败")
+
+                # 每个循环短暂休眠并同步共享队列引用
+                time.sleep(0.05)
+            except Exception as e:
+                print(f"模拟器运行时出错: {e}")
+                time.sleep(0.1)
 
     except Exception as e:
         print(f"程序运行时发生错误: {e}", file=sys.stderr)

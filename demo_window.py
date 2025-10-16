@@ -178,7 +178,18 @@ class ControlPanel:
 
     def start_test(self):
         """开始测试功能"""
-        print("开始测试...")
+        try:
+            # 清除可能遗留的停止标志，防止问题
+            if '_stop_mqtt' in self.update_queue:
+                try:
+                    del self.update_queue['_stop_mqtt']
+                except:
+                    pass
+            # 将开始请求放入 update_queue，模拟器线程会检测并连接
+            self.update_queue['_start_mqtt'] = True
+            print("开始测试: 已请求启动 MQTT 连接")
+        except Exception as e:
+            print(f"请求开始测试失败: {e}")
 
     def stop_test(self):
         """停止测试功能"""
