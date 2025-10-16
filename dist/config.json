@@ -1,15 +1,19 @@
 {
   "simulation_mode": false,
   "mqtt": {
-    "broker": "10.234.110.100",
-    "simulation_broker": "10.234.110.100",
+    "broker": "broker.emqx.io",
+    "simulation_broker": "broker.emqx.io",
     "port": 1883,
     "keepalive": 3,
     "username": "device{device_serial}_client",
     "password": "111test",
     "client_id_prefix": "excavator_ctrl_",
     "control_topic_base": "{excavator_id}/ctrl/",
-    "non_control_topics": ["remote_sensor/remote_ctrl/rtk_info", "sensor2", "sensor3"],
+    "non_control_topics": [
+      "remote_sensor/remote_ctrl/rtk_info",
+      "sensor2",
+      "sensor3"
+    ],
     "safe_topic": "touch_screen/heartbeat",
     "safe_window_size": 4,
     "status_topics": {
@@ -17,7 +21,7 @@
       "internal_status": "up/status/{excavator_id}"
     },
     "device_config": {
-      "device_serial": "1",
+      "device_serial": "2",
       "excavator_id": "LSVHJ13302222176{device_serial}"
     }
   },
@@ -26,7 +30,7 @@
     "bitrate": 250000,
     "send_interval_ms": 100,
     "listen_timeout_ms": 1000,
-    "simulation_receive_messages": [  
+    "simulation_receive_messages": [
       {
         "id": "0x211",
         "data": "050F0F0F0F0F0F0F",

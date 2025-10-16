@@ -21,6 +21,7 @@
       "internal_status": "up/status/{excavator_id}"
     },
     "device_config": {
+      "device_type": "推土机",
       "device_serial": "1",
       "excavator_id": "LSVHJ13302222176{device_serial}"
     }

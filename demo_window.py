@@ -230,10 +230,10 @@ class ControlPanel:
         device_cfg = mqtt_cfg.get('device_config', {})
         current_broker = mqtt_cfg.get('broker', '')
         current_device_serial = device_cfg.get('device_serial', '')
-        current_excavator_template = device_cfg.get('excavator_id', '{device_serial}')
+        current_excavator_template = device_cfg.get('device_type', '')
 
         # 机型选项（可根据需要扩展）
-        machine_options = [current_excavator_template, 'MODEL_A_{device_serial}', 'MODEL_B_{device_serial}']
+        machine_options = [current_excavator_template, '挖掘机', '压路机', '洒水车', '钻机', '平地机', '装载机']
 
         # 创建弹窗
         top = tk.Toplevel(self.root)
@@ -278,7 +278,7 @@ class ControlPanel:
                 if 'device_config' not in cfg['mqtt']:
                     cfg['mqtt']['device_config'] = {}
                 cfg['mqtt']['device_config']['device_serial'] = str(new_device)
-                cfg['mqtt']['device_config']['excavator_id'] = new_machine_tpl
+                cfg['mqtt']['device_config']['device_type'] = new_machine_tpl
 
                 with open(cfg_path, 'w', encoding='utf-8') as f:
                     json.dump(cfg, f, indent=2, ensure_ascii=False)
