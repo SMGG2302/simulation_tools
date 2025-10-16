@@ -311,3 +311,17 @@ class ConfigManager:
         """获取对内协议主题模板（完整话题名）"""
         topic_template = self.get_protocol_mapping().get('internal_class_mapping', {}).get('target_topic_template', 'up/status/{excavator_id}')
         return self._replace_string_placeholders(topic_template)
+
+    def reload(self):
+        """重新读取配置文件并重新校验，用于运行时动态加载配置变更。"""
+        try:
+            new_config = self._load_json(self.config_path, "基础配置")
+            self.config = new_config
+            # 重新加载 protocol_path 可能因 path 改变而需要重新计算，但保持原逻辑
+            self.protocol = self._load_json(self.protocol_path, "协议定义")
+            self._validate_config()
+            print("配置已重新加载")
+            return True
+        except Exception as e:
+            print(f"重新加载配置失败: {e}")
+            return False

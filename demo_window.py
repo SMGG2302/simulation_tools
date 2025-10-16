@@ -5,6 +5,8 @@ import threading
 import queue
 import sys
 from io import StringIO
+import json
+import os
 
 class TextRedirector:
     def __init__(self, widget, root):
@@ -28,13 +30,34 @@ class TextRedirector:
         # 检查组件是否还存在
         try:
             if not self.closed and self.widget.winfo_exists():
+                # 先判断插入前是否已经在末尾，只有在末尾时才自动滚动到末尾
+                at_end_before = self.is_log_at_end()
                 self.widget.configure(state='normal')
                 self.widget.insert(tk.END, str)
                 self.widget.configure(state='disabled')
-                self.widget.see(tk.END)
+                if at_end_before:
+                    # 如果之前已经在末尾，插入新内容后保持跟随最新内容
+                    self.widget.see(tk.END)
+                # 否则保持当前滚动位置（不强制滚到底部）
         except:
             pass
 
+    def is_log_at_end(self):
+        """
+        检查日志文本是否在最新位置（末尾）
+        返回 True 如果在末尾，否则返回 False
+        """
+        # 获取当前视图的滚动位置
+        # yview() 返回一个包含两个元素的元组: (top_position, bottom_position)
+        # 如果 bottom_position >= 1.0，则表示视图在文本末尾
+        try:
+            yview_pos = self.widget.yview()
+            # yview_pos[1] 表示视图底部相对于整个文本的位置（0.0 到 1.0）
+            # 使用接近 1.0 的阈值来判断是否在末尾，容忍浮点误差
+            return yview_pos[1] >= 0.99
+        except:
+            return True  # 出错时默认认为在末尾以便跟随最新日志
+    
     def close(self):
         self.closed = True
 
@@ -44,7 +67,7 @@ class TextRedirector:
 class ControlPanel:
     def __init__(self, root):
         self.root = root
-        root.geometry("1000x700")  # 调整窗口大小，更宽一些以容纳所有控件
+        self.root.geometry("1000x800")  # 调整窗口大小，更宽一些以容纳所有控件
         self.root.title("模拟操作台")
         
         # 标记程序是否正在关闭
@@ -54,32 +77,42 @@ class ControlPanel:
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+        # 创建顶部功能按钮框架
+        self.top_frame = ttk.Frame(self.main_frame)
+        self.top_frame.grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+
+        # 添加一些示例功能按钮
+        self.create_top_button("开始测试", self.start_test)
+        self.create_top_button("停止测试", self.stop_test)
+        self.create_top_button("设置参数", self.set_parameters)
+
         # 设置主框架的行列配置
-        self.main_frame.grid_columnconfigure(0, weight=3)  # 左侧区域权重
-        self.main_frame.grid_columnconfigure(1, weight=3)  # 中间区域权重
-        self.main_frame.grid_columnconfigure(2, weight=2, minsize=300)  # 右侧日志区域最小宽度300
-        self.main_frame.grid_rowconfigure(0, weight=1)     # 垂直方向扩展
+        self.main_frame.grid_columnconfigure(0, weight=3, minsize=150)  # 左侧区域权重
+        self.main_frame.grid_columnconfigure(1, weight=3, minsize=150)  # 中间区域权重
+        self.main_frame.grid_columnconfigure(2, weight=1, minsize=300)  # 右侧日志区域最小宽度300
+        self.main_frame.grid_rowconfigure(1, weight=1)     # 垂直方向扩展，注意行号变为1
 
         # 创建左框架
         self.left_frame = ttk.Frame(self.main_frame)
-        self.left_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        self.left_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
 
         # 创建中框架
         self.middle_frame = ttk.Frame(self.main_frame)
-        self.middle_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
+        self.middle_frame.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
 
         # 创建右侧日志框架
         self.log_frame = ttk.Frame(self.main_frame)
-        self.log_frame.grid(row=0, column=2, padx=5, pady=5, sticky="nsew")
+        self.log_frame.grid(row=1, column=2, padx=5, pady=5, sticky="nsew")
 
         # 在左框架中放置一个按钮
-        button = ttk.Button(self.left_frame, text="点击按钮可以回到中值")
+        button = ttk.Button(self.left_frame, text="点击左侧按钮可以回到中值")
         button.pack(pady=5)
 
         # 在中框架中放置一个按钮
         button = ttk.Button(self.middle_frame, text="Power bool")
         button.pack(pady=5)
 
+        # 初始化滑动条参数
         self.max_val = 255  # 最大值
         self.current_gear = 1  # 初始挡位设置为1
         self.sliders = []  # 存储滑动条
@@ -138,6 +171,134 @@ class ControlPanel:
 
         # 绑定窗口关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def create_top_button(self, text, command):
+        """创建顶部功能按钮"""
+        button = ttk.Button(self.top_frame, text=text, command=command)
+        button.pack(side=tk.LEFT, padx=5, pady=5)
+
+    def start_test(self):
+        """开始测试功能"""
+        if self.update_queue and self.update_queue.get('start_connect_status') == True:
+            print("已经请求启动MQTT连接，请勿重复请求")
+        else:
+            try:
+                # 清除可能遗留的停止标志，防止问题
+                if '_stop_mqtt' in self.update_queue:
+                    try:
+                        del self.update_queue['_stop_mqtt']
+                    except:
+                        pass
+                # 将开始请求放入 update_queue，模拟器线程会检测并连接
+                self.update_queue['_start_mqtt'] = True
+                self.update_queue['start_connect_status'] = True
+                print("开始测试: 已请求启动 MQTT 连接")
+            except Exception as e:
+                print(f"请求开始测试失败: {e}")
+
+    def stop_test(self):
+        """停止测试功能"""
+        if self.update_queue and self.update_queue.get('start_connect_status') == False:
+            print("已经请求停止MQTT连接，请勿重复请求")
+        else:
+            try:
+                print("停止测试: 请求停止 MQTT 连接")
+                # 将停止请求放入 update_queue，模拟器线程会检测并断开连接
+                self.update_queue['_stop_mqtt'] = True
+                self.update_queue['start_connect_status'] = False
+                print("已请求停止MQTT连接")
+            except Exception as e:
+                print(f"设置停止标志失败: {e}")
+
+    def set_parameters(self):
+        """设置参数功能：仅当 MQTT 未连接时生效，弹出窗口设置 broker、设备号和机型，并写回 config.json。"""
+        # 仅在 MQTT 未连接（start_connect_status == False）时允许设置
+        if self.update_queue and self.update_queue.get('start_connect_status'):
+            print("MQTT 正在连接或已连接，无法修改参数，请先停止 MQTT 后再设置。")
+            return
+
+        # 读取当前配置（config.json 相对于当前工作目录）以填充默认值
+        cfg_path = os.path.abspath('config.json')
+        try:
+            with open(cfg_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+        except Exception as e:
+            print(f"读取配置文件失败: {e}")
+            cfg = {}
+
+        mqtt_cfg = cfg.get('mqtt', {})
+        device_cfg = mqtt_cfg.get('device_config', {})
+        current_broker = mqtt_cfg.get('broker', '')
+        current_device_serial = device_cfg.get('device_serial', '')
+        current_excavator_template = device_cfg.get('device_type', '')
+
+        # 机型选项（可根据需要扩展）
+        machine_options = [current_excavator_template, '挖掘机', '压路机', '洒水车', '钻机', '平地机', '装载机']
+
+        # 创建弹窗
+        top = tk.Toplevel(self.root)
+        top.title('设置参数')
+        top.geometry('400x250')
+
+        ttk.Label(top, text='Broker 地址:').pack(anchor='w', padx=10, pady=(10, 0))
+        broker_var = tk.StringVar(value=current_broker)
+        broker_entry = ttk.Entry(top, textvariable=broker_var)
+        broker_entry.pack(fill='x', padx=10, pady=5)
+
+        ttk.Label(top, text='设备号 (device_serial):').pack(anchor='w', padx=10, pady=(5, 0))
+        device_var = tk.StringVar(value=current_device_serial)
+        device_entry = ttk.Entry(top, textvariable=device_var)
+        device_entry.pack(fill='x', padx=10, pady=5)
+
+        ttk.Label(top, text='机型选择:').pack(anchor='w', padx=10, pady=(5, 0))
+        machine_var = tk.StringVar(value=machine_options[0])
+        machine_cb = ttk.Combobox(top, textvariable=machine_var, values=machine_options, state='readonly')
+        machine_cb.pack(fill='x', padx=10, pady=5)
+
+        def on_confirm():
+            nonlocal cfg
+            new_broker = broker_var.get().strip()
+            new_device = device_var.get().strip()
+            new_machine_tpl = machine_var.get().strip()
+
+            if not new_broker:
+                print('Broker 地址不能为空')
+                return
+            if not new_device:
+                print('设备号不能为空')
+                return
+
+            # 写回 config.json
+            try:
+                if not cfg:
+                    cfg = {}
+                if 'mqtt' not in cfg:
+                    cfg['mqtt'] = {}
+                cfg['mqtt']['broker'] = new_broker
+                if 'device_config' not in cfg['mqtt']:
+                    cfg['mqtt']['device_config'] = {}
+                cfg['mqtt']['device_config']['device_serial'] = str(new_device)
+                cfg['mqtt']['device_config']['device_type'] = new_machine_tpl
+
+                with open(cfg_path, 'w', encoding='utf-8') as f:
+                    json.dump(cfg, f, indent=2, ensure_ascii=False)
+
+                print('已保存配置文件。请求主程序重新读取配置。')
+                # 通知主程序重新加载配置
+                try:
+                    self.update_queue['_reload_config'] = True
+                except Exception:
+                    pass
+                top.destroy()
+            except Exception as e:
+                print(f'保存配置失败: {e}')
+
+        btn = ttk.Button(top, text='确定', command=on_confirm)
+        btn.pack(side='bottom', pady=12)
+
+        # 使弹窗为模态（简单实现）
+        top.transient(self.root)
+        top.grab_set()
 
     def on_closing(self):
         """处理窗口关闭事件"""
@@ -308,3 +469,4 @@ class ControlPanel:
         self.current_gear = self.gear_slider.get()
         self.gear_label.config(text=f"Power17：{int(self.current_gear)}")
         self.update_queue["power17"] = self.current_gear  # 更新 update_queue 字典
+

@@ -69,19 +69,67 @@ def run_simulator(stop_flag, config_manager):
     )
 
     try:
-        print("正在连接MQTT...")
-        if simulator_mian_screen.connect():
-            print("连接MQTT成功")
-            if simulator_mian_screen.start_send_signal():
-                print("启动发送信号线程和心跳线程")
-                # 主线程等待关闭信号
-                while not stop_flag.is_set() and not shutdown_event.is_set():  # 检查 stop_flag 是否被设置
-                    time.sleep(0.01)  # 每0.01秒检测一次关闭信号
-                    simulator_mian_screen.update_queue = update_queue
-            else:
-                print("启动信号发送失败")
-        else:
-            print("连接MQTT失败")
+        print("等待 GUI 发起开始测试 (_start_mqtt) 请求...")
+        # 循环等待 GUI 发起开始请求，支持重复开始/停止
+        while not stop_flag.is_set() and not shutdown_event.is_set():
+            try:
+                # 更新共享的引用
+                simulator_mian_screen.update_queue = update_queue
+
+                # 如果 GUI 请求开始且当前未连接，启动连接并发送线程
+                if simulator_mian_screen.update_queue and simulator_mian_screen.update_queue.get('_start_mqtt'):
+                    print("收到开始请求，尝试连接 MQTT...")
+                    # 清理开始请求标志以避免重复连接
+                    try:
+                        del simulator_mian_screen.update_queue['_start_mqtt']
+                    except:
+                        pass
+                    
+                    if simulator_mian_screen.connect():
+                        print("连接MQTT成功")
+                        simulator_mian_screen.update_queue['start_connect_status'] = True
+                        if simulator_mian_screen.start_send_signal():
+                            print("启动发送信号线程和心跳线程")
+                        else:
+                            print("启动信号发送失败")
+                    else:
+                        print("连接MQTT失败")
+
+                # 检查是否收到停止请求（来自 GUI）
+                try:
+                    if simulator_mian_screen.is_connected and simulator_mian_screen.update_queue and simulator_mian_screen.update_queue.get('_stop_mqtt'):
+                        print("收到停止请求（来自 GUI），正在断开...")
+                        try:
+                            del simulator_mian_screen.update_queue['_stop_mqtt']
+                        except:
+                            pass
+                        simulator_mian_screen.stop_send_signal()
+                        simulator_mian_screen.disconnect()
+                        # 标记 GUI 中的连接状态为 False（若 GUI 在检查该值）
+                        try:
+                            simulator_mian_screen.update_queue['start_connect_status'] = False
+                        except:
+                            pass
+
+                    # 检查是否收到重新加载配置请求
+                    if simulator_mian_screen.update_queue and simulator_mian_screen.update_queue.get('_reload_config'):
+                        print("收到重新加载配置请求，正在重新加载配置...")
+                        try:
+                            del simulator_mian_screen.update_queue['_reload_config']
+                        except:
+                            pass
+                        try:
+                            config_manager.reload()
+                        except Exception as e:
+                            print(f"重新加载配置失败: {e}")
+                except Exception as e:
+                    print(f"处理控制请求时出错: {e}")
+
+                # 每个循环短暂休眠并同步共享队列引用
+                time.sleep(0.05)
+            except Exception as e:
+                print(f"模拟器运行时出错: {e}")
+                time.sleep(0.1)
 
     except Exception as e:
         print(f"程序运行时发生错误: {e}", file=sys.stderr)
@@ -117,6 +165,7 @@ def main():
     """主函数"""
     stop_flag = threading.Event()  # 创建一个线程事件作为停止标志
 
+    # 注册信号处理函数
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
