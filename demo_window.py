@@ -182,7 +182,12 @@ class ControlPanel:
 
     def stop_test(self):
         """停止测试功能"""
-        print("停止测试...")
+        print("停止测试: 请求停止 MQTT 连接")
+        try:
+            # 将停止请求放入 update_queue，模拟器线程会检测并断开连接
+            self.update_queue['_stop_mqtt'] = True
+        except Exception as e:
+            print(f"设置停止标志失败: {e}")
 
     def reset_parameters(self):
         """重置参数功能"""
