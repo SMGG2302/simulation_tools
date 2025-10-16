@@ -82,8 +82,7 @@ class ControlPanel:
         # 添加一些示例功能按钮
         self.create_top_button("开始测试", self.start_test)
         self.create_top_button("停止测试", self.stop_test)
-        self.create_top_button("重置参数", self.reset_parameters)
-        self.create_top_button("导出日志", self.export_logs)
+        self.create_top_button("设置参数", self.set_parameters)
 
         # 设置主框架的行列配置
         self.main_frame.grid_columnconfigure(0, weight=3, minsize=150)  # 左侧区域权重
@@ -209,13 +208,9 @@ class ControlPanel:
             except Exception as e:
                 print(f"设置停止标志失败: {e}")
 
-    def reset_parameters(self):
+    def set_parameters(self):
         """重置参数功能"""
         print("重置参数...")
-
-    def export_logs(self):
-        """导出日志功能"""
-        print("导出日志...")
 
     def on_closing(self):
         """处理窗口关闭事件"""
