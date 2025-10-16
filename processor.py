@@ -168,8 +168,6 @@ class  MainScreenSimulator:
                         del self.update_queue['_stop_mqtt']
                     except:
                         pass
-                    # 设置标志位避免重复退出
-                    self.update_queue['set_stop_mqtt'] = True
                     break
 
             except Exception as e:

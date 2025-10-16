@@ -84,9 +84,10 @@ def run_simulator(stop_flag, config_manager):
                         del simulator_mian_screen.update_queue['_start_mqtt']
                     except:
                         pass
-
+                    
                     if simulator_mian_screen.connect():
                         print("连接MQTT成功")
+                        simulator_mian_screen.update_queue['start_connect_status'] = True
                         if simulator_mian_screen.start_send_signal():
                             print("启动发送信号线程和心跳线程")
                         else:
