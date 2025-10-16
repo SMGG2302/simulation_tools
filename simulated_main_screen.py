@@ -95,6 +95,36 @@ def run_simulator(stop_flag, config_manager):
                     else:
                         print("连接MQTT失败")
 
+                # 检查是否收到停止请求（来自 GUI）
+                try:
+                    if simulator_mian_screen.is_connected and simulator_mian_screen.update_queue and simulator_mian_screen.update_queue.get('_stop_mqtt'):
+                        print("收到停止请求（来自 GUI），正在断开...")
+                        try:
+                            del simulator_mian_screen.update_queue['_stop_mqtt']
+                        except:
+                            pass
+                        simulator_mian_screen.stop_send_signal()
+                        simulator_mian_screen.disconnect()
+                        # 标记 GUI 中的连接状态为 False（若 GUI 在检查该值）
+                        try:
+                            simulator_mian_screen.update_queue['start_connect_status'] = False
+                        except:
+                            pass
+
+                    # 检查是否收到重新加载配置请求
+                    if simulator_mian_screen.update_queue and simulator_mian_screen.update_queue.get('_reload_config'):
+                        print("收到重新加载配置请求，正在重新加载配置...")
+                        try:
+                            del simulator_mian_screen.update_queue['_reload_config']
+                        except:
+                            pass
+                        try:
+                            config_manager.reload()
+                        except Exception as e:
+                            print(f"重新加载配置失败: {e}")
+                except Exception as e:
+                    print(f"处理控制请求时出错: {e}")
+
                 # 每个循环短暂休眠并同步共享队列引用
                 time.sleep(0.05)
             except Exception as e:

@@ -5,6 +5,8 @@ import threading
 import queue
 import sys
 from io import StringIO
+import json
+import os
 
 class TextRedirector:
     def __init__(self, widget, root):
@@ -209,8 +211,94 @@ class ControlPanel:
                 print(f"设置停止标志失败: {e}")
 
     def set_parameters(self):
-        """重置参数功能"""
-        print("重置参数...")
+        """设置参数功能：仅当 MQTT 未连接时生效，弹出窗口设置 broker、设备号和机型，并写回 config.json。"""
+        # 仅在 MQTT 未连接（start_connect_status == False）时允许设置
+        if self.update_queue and self.update_queue.get('start_connect_status'):
+            print("MQTT 正在连接或已连接，无法修改参数，请先停止 MQTT 后再设置。")
+            return
+
+        # 读取当前配置（config.json 相对于当前工作目录）以填充默认值
+        cfg_path = os.path.abspath('config.json')
+        try:
+            with open(cfg_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+        except Exception as e:
+            print(f"读取配置文件失败: {e}")
+            cfg = {}
+
+        mqtt_cfg = cfg.get('mqtt', {})
+        device_cfg = mqtt_cfg.get('device_config', {})
+        current_broker = mqtt_cfg.get('broker', '')
+        current_device_serial = device_cfg.get('device_serial', '')
+        current_excavator_template = device_cfg.get('excavator_id', '{device_serial}')
+
+        # 机型选项（可根据需要扩展）
+        machine_options = [current_excavator_template, 'MODEL_A_{device_serial}', 'MODEL_B_{device_serial}']
+
+        # 创建弹窗
+        top = tk.Toplevel(self.root)
+        top.title('设置参数')
+        top.geometry('400x250')
+
+        ttk.Label(top, text='Broker 地址:').pack(anchor='w', padx=10, pady=(10, 0))
+        broker_var = tk.StringVar(value=current_broker)
+        broker_entry = ttk.Entry(top, textvariable=broker_var)
+        broker_entry.pack(fill='x', padx=10, pady=5)
+
+        ttk.Label(top, text='设备号 (device_serial):').pack(anchor='w', padx=10, pady=(5, 0))
+        device_var = tk.StringVar(value=current_device_serial)
+        device_entry = ttk.Entry(top, textvariable=device_var)
+        device_entry.pack(fill='x', padx=10, pady=5)
+
+        ttk.Label(top, text='机型选择:').pack(anchor='w', padx=10, pady=(5, 0))
+        machine_var = tk.StringVar(value=machine_options[0])
+        machine_cb = ttk.Combobox(top, textvariable=machine_var, values=machine_options, state='readonly')
+        machine_cb.pack(fill='x', padx=10, pady=5)
+
+        def on_confirm():
+            nonlocal cfg
+            new_broker = broker_var.get().strip()
+            new_device = device_var.get().strip()
+            new_machine_tpl = machine_var.get().strip()
+
+            if not new_broker:
+                print('Broker 地址不能为空')
+                return
+            if not new_device:
+                print('设备号不能为空')
+                return
+
+            # 写回 config.json
+            try:
+                if not cfg:
+                    cfg = {}
+                if 'mqtt' not in cfg:
+                    cfg['mqtt'] = {}
+                cfg['mqtt']['broker'] = new_broker
+                if 'device_config' not in cfg['mqtt']:
+                    cfg['mqtt']['device_config'] = {}
+                cfg['mqtt']['device_config']['device_serial'] = str(new_device)
+                cfg['mqtt']['device_config']['excavator_id'] = new_machine_tpl
+
+                with open(cfg_path, 'w', encoding='utf-8') as f:
+                    json.dump(cfg, f, indent=2, ensure_ascii=False)
+
+                print('已保存配置文件。请求主程序重新读取配置。')
+                # 通知主程序重新加载配置
+                try:
+                    self.update_queue['_reload_config'] = True
+                except Exception:
+                    pass
+                top.destroy()
+            except Exception as e:
+                print(f'保存配置失败: {e}')
+
+        btn = ttk.Button(top, text='确定', command=on_confirm)
+        btn.pack(side='bottom', pady=12)
+
+        # 使弹窗为模态（简单实现）
+        top.transient(self.root)
+        top.grab_set()
 
     def on_closing(self):
         """处理窗口关闭事件"""
