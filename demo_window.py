@@ -67,49 +67,49 @@ class TextRedirector:
 class ControlPanel:
     def __init__(self, root):
         self.root = root
-        self.root.geometry("1000x800")  # 调整窗口大小，更宽一些以容纳所有控件
+        self.root.geometry("900x800")  # 调整窗口大小，更宽一些以容纳所有控件
         self.root.title("模拟操作台")
         
         # 标记程序是否正在关闭
         self.closing = False
 
         # 创建主容器框架
-        self.main_frame = ttk.Frame(self.root)
+        self.main_frame = tk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+        # 设置主框架的行列配置
+        self.main_frame.grid_columnconfigure(0, weight=3, minsize=250)  # 左侧区域权重
+        self.main_frame.grid_columnconfigure(1, weight=3, minsize=150)  # 中间区域权重
+        self.main_frame.grid_columnconfigure(2, weight=1, minsize=450)  # 右侧日志区域最小宽度250
+        self.main_frame.grid_rowconfigure(1, weight=1)     # 垂直方向扩展，注意行号变为1
+
         # 创建顶部功能按钮框架
-        self.top_frame = ttk.Frame(self.main_frame)
+        self.top_frame = tk.Frame(self.main_frame)
         self.top_frame.grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+
+        # 创建左框架
+        self.left_frame = tk.Frame(self.main_frame)
+        self.left_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+
+        # 创建中框架
+        self.middle_frame = tk.Frame(self.main_frame)
+        self.middle_frame.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
+
+        # 创建右侧日志框架
+        self.log_frame = tk.Frame(self.main_frame)
+        self.log_frame.grid(row=1, column=2, padx=5, pady=5, sticky="nsew")
 
         # 添加一些示例功能按钮
         self.create_top_button("开始测试", self.start_test)
         self.create_top_button("停止测试", self.stop_test)
         self.create_top_button("设置参数", self.set_parameters)
 
-        # 设置主框架的行列配置
-        self.main_frame.grid_columnconfigure(0, weight=3, minsize=150)  # 左侧区域权重
-        self.main_frame.grid_columnconfigure(1, weight=3, minsize=150)  # 中间区域权重
-        self.main_frame.grid_columnconfigure(2, weight=1, minsize=300)  # 右侧日志区域最小宽度300
-        self.main_frame.grid_rowconfigure(1, weight=1)     # 垂直方向扩展，注意行号变为1
-
-        # 创建左框架
-        self.left_frame = ttk.Frame(self.main_frame)
-        self.left_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
-
-        # 创建中框架
-        self.middle_frame = ttk.Frame(self.main_frame)
-        self.middle_frame.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
-
-        # 创建右侧日志框架
-        self.log_frame = ttk.Frame(self.main_frame)
-        self.log_frame.grid(row=1, column=2, padx=5, pady=5, sticky="nsew")
-
         # 在左框架中放置一个按钮
-        button = ttk.Button(self.left_frame, text="点击左侧按钮可以回到中值")
+        button = tk.Button(self.left_frame, text="点击左侧按钮可以回到中值")
         button.pack(pady=5)
 
         # 在中框架中放置一个按钮
-        button = ttk.Button(self.middle_frame, text="Power bool")
+        button = tk.Button(self.middle_frame, text="Power bool")
         button.pack(pady=5)
 
         # 初始化滑动条参数
@@ -145,7 +145,7 @@ class ControlPanel:
         self.gear_slider.pack(pady=5)
 
         # 添加标签，显示当前档位
-        self.gear_label = ttk.Label(self.middle_frame, text="Power17")
+        self.gear_label = tk.Label(self.middle_frame, text="Power17")
         self.gear_label.pack(pady=5)
 
         # 设置滑动条事件监听，更新标签显示当前档位
@@ -174,7 +174,7 @@ class ControlPanel:
 
     def create_top_button(self, text, command):
         """创建顶部功能按钮"""
-        button = ttk.Button(self.top_frame, text=text, command=command)
+        button = tk.Button(self.top_frame, text=text, command=command)
         button.pack(side=tk.LEFT, padx=5, pady=5)
 
     def start_test(self):
@@ -240,19 +240,19 @@ class ControlPanel:
         top.title('设置参数')
         top.geometry('400x250')
 
-        ttk.Label(top, text='Broker 地址:').pack(anchor='w', padx=10, pady=(10, 0))
+        tk.Label(top, text='Broker 地址:').pack(anchor='w', padx=10, pady=(10, 0))
         broker_var = tk.StringVar(value=current_broker)
-        broker_entry = ttk.Entry(top, textvariable=broker_var)
+        broker_entry = tk.Entry(top, textvariable=broker_var)
         broker_entry.pack(fill='x', padx=10, pady=5)
 
-        ttk.Label(top, text='设备号 (device_serial):').pack(anchor='w', padx=10, pady=(5, 0))
+        tk.Label(top, text='设备号 (device_serial):').pack(anchor='w', padx=10, pady=(5, 0))
         device_var = tk.StringVar(value=current_device_serial)
-        device_entry = ttk.Entry(top, textvariable=device_var)
+        device_entry = tk.Entry(top, textvariable=device_var)
         device_entry.pack(fill='x', padx=10, pady=5)
 
-        ttk.Label(top, text='机型选择:').pack(anchor='w', padx=10, pady=(5, 0))
+        tk.Label(top, text='机型选择:').pack(anchor='w', padx=10, pady=(5, 0))
         machine_var = tk.StringVar(value=machine_options[0])
-        machine_cb = ttk.Combobox(top, textvariable=machine_var, values=machine_options, state='readonly')
+        machine_cb = tk.Combobox(top, textvariable=machine_var, values=machine_options, state='readonly')
         machine_cb.pack(fill='x', padx=10, pady=5)
 
         def on_confirm():
@@ -293,7 +293,7 @@ class ControlPanel:
             except Exception as e:
                 print(f'保存配置失败: {e}')
 
-        btn = ttk.Button(top, text='确定', command=on_confirm)
+        btn = tk.Button(top, text='确定', command=on_confirm)
         btn.pack(side='bottom', pady=12)
 
         # 使弹窗为模态（简单实现）
@@ -319,15 +319,15 @@ class ControlPanel:
 
     def create_slider(self, label, parent):
         # 创建滑动条框架
-        frame = ttk.Frame(parent)
+        frame = tk.Frame(parent)
         frame.pack(fill=tk.X, pady=2)
         
         # 标签
-        label_widget = ttk.Button(frame, text=label, command=lambda: self.reset_slider_by_label(label))
+        label_widget = tk.Button(frame, text=label, command=lambda: self.reset_slider_by_label(label))
         label_widget.pack(side=tk.LEFT, padx=5)
         
         # 创建当前值标签
-        current_val_label = ttk.Label(frame, text="127", width=5)
+        current_val_label = tk.Label(frame, text="127", width=5)
         current_val_label.pack(side=tk.RIGHT, padx=5)
         
         # 创建滑动条
@@ -352,41 +352,41 @@ class ControlPanel:
 
     def create_switch(self, label, parent):
         """创建布尔开关按钮"""
-        frame = ttk.Frame(parent)
+        frame = tk.Frame(parent)
         frame.pack(fill=tk.X, pady=2)
         
         bool_var = tk.BooleanVar()
-        switch = ttk.Checkbutton(frame, text=label, variable=bool_var)
+        switch = tk.Checkbutton(frame, text=label, variable=bool_var)
         switch.pack(side=tk.LEFT, padx=5)
         self.max_min_switches.append(bool_var)
 
     def create_bool_button(self, label, parent):
         """创建布尔值按钮"""
-        frame = ttk.Frame(parent)
+        frame = tk.Frame(parent)
         frame.pack(fill=tk.X, pady=2)
         
         bool_var = tk.BooleanVar()
-        button = ttk.Checkbutton(frame, text=label, variable=bool_var)
+        button = tk.Checkbutton(frame, text=label, variable=bool_var)
         button.pack(side=tk.LEFT, padx=5)
         self.bool_buttons.append(bool_var)
 
     def create_update_button(self, parent):
         """创建更新按钮"""
-        self.update_button = ttk.Button(parent, text="Update", command=self.update)
+        self.update_button = tk.Button(parent, text="Update", command=self.update)
         self.update_button.pack(pady=10)
 
     def create_log_area(self):
         """创建日志显示区域"""
-        log_label = ttk.Label(self.log_frame, text="运行日志", font=("Arial", 10, "bold"))
+        log_label = tk.Label(self.log_frame, text="运行日志", font=("Arial", 10, "bold"))
         log_label.pack(pady=5)
         
         # 创建文本框和滚动条
-        log_text_frame = ttk.Frame(self.log_frame)
+        log_text_frame = tk.Frame(self.log_frame)
         log_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         self.log_text = tk.Text(log_text_frame, state='disabled', wrap=tk.WORD)
-        log_scrollbar_y = ttk.Scrollbar(log_text_frame, orient="vertical", command=self.log_text.yview)
-        log_scrollbar_x = ttk.Scrollbar(log_text_frame, orient="horizontal", command=self.log_text.xview)
+        log_scrollbar_y = tk.Scrollbar(log_text_frame, orient="vertical", command=self.log_text.yview)
+        log_scrollbar_x = tk.Scrollbar(log_text_frame, orient="horizontal", command=self.log_text.xview)
         self.log_text.configure(yscrollcommand=log_scrollbar_y.set, xscrollcommand=log_scrollbar_x.set)
         
         # 布局
