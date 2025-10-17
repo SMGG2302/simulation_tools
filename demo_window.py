@@ -7,6 +7,15 @@ from io import StringIO
 import json
 import os
 
+
+def resource_path(relative_path: str) -> str:
+    """Return path to resource; works in dev and when bundled by PyInstaller."""
+    if getattr(sys, 'frozen', False):
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    else:
+        base_path = os.path.dirname(__file__)
+    return os.path.join(base_path, relative_path)
+
 class TextRedirector:
     def __init__(self, widget, root):
         self.widget = widget
@@ -72,6 +81,20 @@ class ControlPanel:
 
         self.root.geometry("900x800")  # 调整窗口大小，更宽一些以容纳所有控件
         self.root.title("模拟操作台")
+        # 尝试设置主窗口图标（使用项目目录下的 simulator.ico）
+        try:
+            ico = resource_path('simulator.ico')
+            if sys.platform == 'win32':
+                self.root.iconbitmap(ico)
+            else:
+                try:
+                    img = tk.PhotoImage(file=resource_path('simulator.png'))
+                    self.root.iconphoto(True, img)
+                    self._icon_image = img
+                except Exception:
+                    pass
+        except Exception:
+            pass
         
         # 标记程序是否正在关闭
         self.closing = False
@@ -277,6 +300,18 @@ class ControlPanel:
 
         # 创建弹窗
         top = tk.Toplevel(self.root)
+        # 尝试给弹窗设置图标
+        try:
+            ico = resource_path('simulator.ico')
+            if sys.platform == 'win32':
+                top.iconbitmap(ico)
+            else:
+                try:
+                    top.iconphoto(True, self._icon_image)
+                except Exception:
+                    pass
+        except Exception:
+            pass
         top.title('设置参数')
         top.geometry('400x250')
 
