@@ -441,10 +441,20 @@ class ControlPanel:
         """创建布尔值按钮"""
         frame = tk.Frame(parent)
         frame.pack(fill=tk.X, pady=2)
-        
-        bool_var = tk.BooleanVar()
-        button = tk.Checkbutton(frame, text=label, variable=bool_var)
-        button.pack(side=tk.LEFT, padx=5)
+
+        bool_var = tk.BooleanVar(value=False)
+
+        default_bg = frame.cget('bg')
+        def toggle(bvar=bool_var, btn=None):
+            bvar.set(not bvar.get())
+            if bvar.get():
+                btn.config(relief='sunken', bg='lightgreen')
+            else:
+                btn.config(relief='raised', bg=default_bg)
+
+        btn = tk.Button(frame, text=label, relief='raised')
+        btn.config(command=lambda b=btn: toggle(btn=b))
+        btn.pack(side=tk.TOP, anchor='center', padx=5)
         self.bool_buttons.append(bool_var)
 
     def create_update_button(self, parent):
