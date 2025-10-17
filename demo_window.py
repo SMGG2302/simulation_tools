@@ -79,7 +79,7 @@ class ControlPanel:
         self.bg_color = "#f7f7f7"
         self.fg_color = "#000000"
 
-        self.root.geometry("900x800")  # 调整窗口大小，更宽一些以容纳所有控件
+        self.root.geometry("900x900")  # 调整窗口大小，更宽一些以容纳所有控件
         self.root.title("模拟操作台")
         # 尝试设置主窗口图标（使用项目目录下的 simulator.ico）
         try:
@@ -129,13 +129,13 @@ class ControlPanel:
         self.create_top_button("停止测试", self.stop_test)
         self.create_top_button("设置参数", self.set_parameters)
 
-        # 在左框架中放置一个按钮
-        button = tk.Button(self.left_frame, text="点击左侧按钮可以回到中值")
-        button.pack(pady=5)
+        # 左框架说明
+        left_label = tk.Label(self.left_frame, text="模拟量", font=("Arial", 10, "bold"), bg=self.bg_color)
+        left_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
 
-        # 在中框架中放置一个按钮
-        button = tk.Button(self.middle_frame, text="Power bool")
-        button.pack(pady=5)
+        # 中框架说明
+        middle_label = tk.Label(self.middle_frame, text="布尔量", font=("Arial", 10, "bold"), bg=self.bg_color)
+        middle_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
 
         # 初始化滑动条参数
         self.max_val = 255  # 最大值
@@ -454,8 +454,10 @@ class ControlPanel:
 
     def create_log_area(self):
         """创建日志显示区域"""
-        log_label = tk.Label(self.log_frame, text="运行日志", font=("Arial", 10, "bold"))
-        log_label.pack(pady=5)
+        # 使用 fill 和内外边距，左对齐，避免文字被下方组件遮挡
+        log_label = tk.Label(self.log_frame, text="运行日志", font=("Arial", 10, "bold"), bg=self.bg_color)
+        # side='top' 并横向填充，减少被下方内容遮挡的可能性；适当增加下边距
+        log_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
         
         # 创建文本框和滚动条
         log_text_frame = tk.Frame(self.log_frame)
