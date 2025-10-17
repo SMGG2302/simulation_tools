@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import ttk
 import time
 import threading
 import queue
@@ -67,14 +66,17 @@ class TextRedirector:
 class ControlPanel:
     def __init__(self, root):
         self.root = root
+        # 默认配色（可以在运行时修改以统一主题）
+        self.bg_color = "#f7f7f7"
+        self.fg_color = "#000000"
+
         self.root.geometry("900x800")  # 调整窗口大小，更宽一些以容纳所有控件
         self.root.title("模拟操作台")
         
         # 标记程序是否正在关闭
         self.closing = False
-
         # 创建主容器框架
-        self.main_frame = tk.Frame(self.root)
+        self.main_frame = tk.Frame(self.root, bg=self.bg_color)
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # 设置主框架的行列配置
@@ -84,19 +86,19 @@ class ControlPanel:
         self.main_frame.grid_rowconfigure(1, weight=1)     # 垂直方向扩展，注意行号变为1
 
         # 创建顶部功能按钮框架
-        self.top_frame = tk.Frame(self.main_frame)
+        self.top_frame = tk.Frame(self.main_frame, bg=self.bg_color)
         self.top_frame.grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # 创建左框架
-        self.left_frame = tk.Frame(self.main_frame)
+        self.left_frame = tk.Frame(self.main_frame, bg=self.bg_color)
         self.left_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
 
         # 创建中框架
-        self.middle_frame = tk.Frame(self.main_frame)
+        self.middle_frame = tk.Frame(self.main_frame, bg=self.bg_color)
         self.middle_frame.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
 
         # 创建右侧日志框架
-        self.log_frame = tk.Frame(self.main_frame)
+        self.log_frame = tk.Frame(self.main_frame, bg=self.bg_color)
         self.log_frame.grid(row=1, column=2, padx=5, pady=5, sticky="nsew")
 
         # 添加一些示例功能按钮
@@ -171,6 +173,44 @@ class ControlPanel:
 
         # 绑定窗口关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        # 在初始化完成后应用主题配色到所有 tk 子控件
+        try:
+            self.apply_theme(self.main_frame, bg=self.bg_color, fg=self.fg_color)
+        except Exception:
+            pass
+
+    def apply_theme(self, widget, bg="#ffffff", fg="#000000"):
+        """递归应用背景色/前景色到 widget 及其子孙控件（仅对 tk 小部件生效）。
+
+        注意：某些控件不接受 bg/fg 参数（或使用不同的属性名），此函数会对可用属性进行尝试。
+        """
+        # 尝试设置当前 widget 的背景或前景颜色
+        try:
+            # 大多数 tk 小部件支持 configure(bg=...)
+            widget.configure(bg=bg)
+        except Exception:
+            pass
+        try:
+            widget.configure(fg=fg)
+        except Exception:
+            pass
+
+        # 对于 Text 小部件，使用 tag/直接配置背景前景
+        if isinstance(widget, tk.Text):
+            try:
+                widget.configure(bg=bg, fg=fg)
+            except Exception:
+                pass
+
+        # 递归处理子控件
+        for child in widget.winfo_children():
+            # 对于 Frame/Label/Button/Entry/Scale/Checkbutton 等常见控件，apply_theme 会尝试设置 bg/fg
+            try:
+                self.apply_theme(child, bg=bg, fg=fg)
+            except Exception:
+                # 忽略无法设置的子控件
+                pass
 
     def create_top_button(self, text, command):
         """创建顶部功能按钮"""
@@ -252,8 +292,10 @@ class ControlPanel:
 
         tk.Label(top, text='机型选择:').pack(anchor='w', padx=10, pady=(5, 0))
         machine_var = tk.StringVar(value=machine_options[0])
-        machine_cb = tk.Combobox(top, textvariable=machine_var, values=machine_options, state='readonly')
-        machine_cb.pack(fill='x', padx=10, pady=5)
+        # 使用原生 tk 的 OptionMenu （统一为 tk 小部件以便统一配色）
+        machine_menu = tk.OptionMenu(top, machine_var, *machine_options)
+        machine_menu.config(width=30)
+        machine_menu.pack(fill='x', padx=10, pady=5)
 
         def on_confirm():
             nonlocal cfg
