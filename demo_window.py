@@ -79,7 +79,7 @@ class ControlPanel:
         self.bg_color = "#f7f7f7"
         self.fg_color = "#000000"
 
-        self.root.geometry("900x900")  # 调整窗口大小，更宽一些以容纳所有控件
+        self.root.geometry("1200x900")  # 调整窗口大小，更宽一些以容纳所有控件
         self.root.title("模拟操作台")
         # 尝试设置主窗口图标（使用项目目录下的 simulator.ico）
         try:
@@ -105,37 +105,47 @@ class ControlPanel:
         # 设置主框架的行列配置
         self.main_frame.grid_columnconfigure(0, weight=3, minsize=250)  # 左侧区域权重
         self.main_frame.grid_columnconfigure(1, weight=3, minsize=150)  # 中间区域权重
-        self.main_frame.grid_columnconfigure(2, weight=1, minsize=450)  # 右侧日志区域最小宽度250
+        self.main_frame.grid_columnconfigure(2, weight=3, minsize=150)  # 右侧日志权重
+        self.main_frame.grid_columnconfigure(3, weight=1, minsize=450)
         self.main_frame.grid_rowconfigure(1, weight=1)     # 垂直方向扩展，注意行号变为1
 
         # 创建顶部功能按钮框架
         self.top_frame = tk.Frame(self.main_frame, bg=self.bg_color)
         self.top_frame.grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
-        # 创建左框架
-        self.left_frame = tk.Frame(self.main_frame, bg=self.bg_color)
-        self.left_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        # 创建action动作类框架
+        self.action_frame = tk.Frame(self.main_frame, bg=self.bg_color)
+        self.action_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
 
-        # 创建中框架
-        self.middle_frame = tk.Frame(self.main_frame, bg=self.bg_color)
-        self.middle_frame.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
+        # 创建power动力类框架
+        self.power_frame = tk.Frame(self.main_frame, bg=self.bg_color)
+        self.power_frame.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
 
-        # 创建右侧日志框架
+        # 创建aux辅助类框架
+        self.aux_frame = tk.Frame(self.main_frame, bg=self.bg_color)
+        self.aux_frame.grid(row=1, column=2, padx=5, pady=5, sticky="nsew")
+
+        # 创建log日志框架
         self.log_frame = tk.Frame(self.main_frame, bg=self.bg_color)
-        self.log_frame.grid(row=1, column=2, padx=5, pady=5, sticky="nsew")
+        self.log_frame.grid(row=1, column=3, padx=5, pady=5, sticky="nsew")
 
         # 添加一些示例功能按钮
         self.create_top_button("开始测试", self.start_test)
         self.create_top_button("停止测试", self.stop_test)
         self.create_top_button("设置参数", self.set_parameters)
 
-        # 左框架说明
-        left_label = tk.Label(self.left_frame, text="模拟量", font=("Arial", 10, "bold"), bg=self.bg_color)
+        # action动作类框架说明
+        left_label = tk.Label(self.action_frame, text="action", font=("Arial", 10, "bold"), bg=self.bg_color)
         left_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
 
-        # 中框架说明
-        middle_label = tk.Label(self.middle_frame, text="布尔量", font=("Arial", 10, "bold"), bg=self.bg_color)
+        # power动力类框架说明
+        middle_label = tk.Label(self.power_frame, text="power", font=("Arial", 10, "bold"), bg=self.bg_color)
         middle_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
+
+        # aux辅助类框架说明
+        right_label = tk.Label(self.aux_frame, text="aux", font=("Arial", 10, "bold"), bg=self.bg_color)
+        right_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
+
 
         # 初始化滑动条参数
         self.max_val = 255  # 最大值
@@ -149,28 +159,28 @@ class ControlPanel:
 
         # 创建左侧滑动条和开关
         for i in range(8):  # 创建 8 对滑动条和布尔开关
-            self.create_slider(f"Action{i+1}", self.left_frame)
-            self.create_switch(f"Send Data {i+1}", self.left_frame)
+            self.create_slider(f"Action{i+1}", self.action_frame)
+            self.create_switch(f"Send Data {i+1}", self.action_frame)
 
         # 创建中间布尔值按钮
         for i in range(21):
             if i < 16:
-                self.create_bool_button(f"power{i+1}", self.middle_frame)
+                self.create_bool_button(f"power{i+1}", self.power_frame)
             elif i == 16:
                 continue
             else:
-                self.create_bool_button(f"aux{i-17}", self.middle_frame)
+                self.create_bool_button(f"aux{i-17}", self.power_frame)
 
         # 创建更新按钮
-        self.create_update_button(self.middle_frame)
+        self.create_update_button(self.power_frame)
 
         # 创建换挡的滑动条（模拟换挡杆）
-        self.gear_slider = tk.Scale(self.middle_frame, from_=1, to=6, orient="horizontal", length=200, sliderlength=20)
+        self.gear_slider = tk.Scale(self.power_frame, from_=1, to=6, orient="horizontal", length=200, sliderlength=20)
         self.gear_slider.set(1)  # 默认设置为 1 档
         self.gear_slider.pack(pady=5)
 
         # 添加标签，显示当前档位
-        self.gear_label = tk.Label(self.middle_frame, text="Power17")
+        self.gear_label = tk.Label(self.power_frame, text="Power17")
         self.gear_label.pack(pady=5)
 
         # 设置滑动条事件监听，更新标签显示当前档位
@@ -202,7 +212,7 @@ class ControlPanel:
             self.apply_theme(self.main_frame, bg=self.bg_color, fg=self.fg_color)
         except Exception:
             pass
-
+    
     def apply_theme(self, widget, bg="#ffffff", fg="#000000"):
         """递归应用背景色/前景色到 widget 及其子孙控件（仅对 tk 小部件生效）。
 
@@ -234,6 +244,43 @@ class ControlPanel:
             except Exception:
                 # 忽略无法设置的子控件
                 pass
+    
+    def create_top_area(self, text, command):
+        """创建顶部按钮"""
+
+    def creat_action_area(self, label, parent):
+        """创建动作区域"""
+
+    def creat_power_area(self, label, parent):
+        """创建动作区域"""
+
+    def creat_aux_area(self, label, parent):
+        """创建动作区域"""
+
+   
+    def create_log_area(self):
+        """创建日志显示区域"""
+        # 使用 fill 和内外边距，左对齐，避免文字被下方组件遮挡
+        log_label = tk.Label(self.log_frame, text="运行日志", font=("Arial", 10, "bold"), bg=self.bg_color)
+        # side='top' 并横向填充，减少被下方内容遮挡的可能性；适当增加下边距
+        log_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
+        
+        # 创建文本框和滚动条
+        log_text_frame = tk.Frame(self.log_frame)
+        log_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        self.log_text = tk.Text(log_text_frame, state='disabled', wrap=tk.WORD)
+        log_scrollbar_y = tk.Scrollbar(log_text_frame, orient="vertical", command=self.log_text.yview)
+        log_scrollbar_x = tk.Scrollbar(log_text_frame, orient="horizontal", command=self.log_text.xview)
+        self.log_text.configure(yscrollcommand=log_scrollbar_y.set, xscrollcommand=log_scrollbar_x.set)
+        
+        # 布局
+        self.log_text.grid(row=0, column=0, sticky="nsew")
+        log_scrollbar_y.grid(row=0, column=1, sticky="ns")
+        log_scrollbar_x.grid(row=1, column=0, sticky="ew")
+        
+        log_text_frame.grid_rowconfigure(0, weight=1)
+        log_text_frame.grid_columnconfigure(0, weight=1)
 
     def create_top_button(self, text, command):
         """创建顶部功能按钮"""
@@ -461,30 +508,6 @@ class ControlPanel:
         """创建更新按钮"""
         self.update_button = tk.Button(parent, text="Update", command=self.update)
         self.update_button.pack(pady=10)
-
-    def create_log_area(self):
-        """创建日志显示区域"""
-        # 使用 fill 和内外边距，左对齐，避免文字被下方组件遮挡
-        log_label = tk.Label(self.log_frame, text="运行日志", font=("Arial", 10, "bold"), bg=self.bg_color)
-        # side='top' 并横向填充，减少被下方内容遮挡的可能性；适当增加下边距
-        log_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
-        
-        # 创建文本框和滚动条
-        log_text_frame = tk.Frame(self.log_frame)
-        log_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        self.log_text = tk.Text(log_text_frame, state='disabled', wrap=tk.WORD)
-        log_scrollbar_y = tk.Scrollbar(log_text_frame, orient="vertical", command=self.log_text.yview)
-        log_scrollbar_x = tk.Scrollbar(log_text_frame, orient="horizontal", command=self.log_text.xview)
-        self.log_text.configure(yscrollcommand=log_scrollbar_y.set, xscrollcommand=log_scrollbar_x.set)
-        
-        # 布局
-        self.log_text.grid(row=0, column=0, sticky="nsew")
-        log_scrollbar_y.grid(row=0, column=1, sticky="ns")
-        log_scrollbar_x.grid(row=1, column=0, sticky="ew")
-        
-        log_text_frame.grid_rowconfigure(0, weight=1)
-        log_text_frame.grid_columnconfigure(0, weight=1)
 
     def update(self):
         """更新按钮点击事件"""
