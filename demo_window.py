@@ -74,6 +74,7 @@ class TextRedirector:
 
 class ControlPanel:
     def __init__(self, root):
+        """初始化控制面板结构"""
         self.root = root
         # 默认配色（可以在运行时修改以统一主题）
         self.bg_color = "#f7f7f7"
@@ -98,6 +99,7 @@ class ControlPanel:
         
         # 标记程序是否正在关闭
         self.closing = False
+
         # 创建主容器框架
         self.main_frame = tk.Frame(self.root, bg=self.bg_color)
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -129,11 +131,6 @@ class ControlPanel:
         self.log_frame = tk.Frame(self.main_frame, bg=self.bg_color)
         self.log_frame.grid(row=1, column=3, padx=5, pady=5, sticky="nsew")
 
-        # 添加一些示例功能按钮
-        self.create_top_button("开始测试", self.start_test)
-        self.create_top_button("停止测试", self.stop_test)
-        self.create_top_button("设置参数", self.set_parameters)
-
         # action动作类框架说明
         left_label = tk.Label(self.action_frame, text="action", font=("Arial", 10, "bold"), bg=self.bg_color)
         left_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
@@ -146,7 +143,7 @@ class ControlPanel:
         right_label = tk.Label(self.aux_frame, text="aux", font=("Arial", 10, "bold"), bg=self.bg_color)
         right_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
 
-
+        """创建功能区域功能"""
         # 初始化滑动条参数
         self.max_val = 255  # 最大值
         self.current_gear = 1  # 初始挡位设置为1
@@ -157,37 +154,22 @@ class ControlPanel:
         self.previous_update_queue = {}  # 上次的更新字典
         self.bool_buttons = []  # 存储布尔按钮
 
-        # 创建左侧滑动条和开关
-        for i in range(8):  # 创建 8 对滑动条和布尔开关
-            self.create_slider(f"Action{i+1}", self.action_frame)
-            self.create_switch(f"Send Data {i+1}", self.action_frame)
-
-        # 创建中间布尔值按钮
-        for i in range(21):
-            self.create_bool_button(f"power{i+1}", self.power_frame)
-        
-        # 创建辅助函数按钮
-        for i in range(3):
-            self.create_bool_button(f"aux{i+1}", self.aux_frame)
-
-        # 创建更新按钮
-        self.create_update_button(self.power_frame)
-
-        # 创建换挡的滑动条（模拟换挡杆）
-        self.gear_slider = tk.Scale(self.power_frame, from_=1, to=6, orient="horizontal", length=200, sliderlength=20)
-        self.gear_slider.set(1)  # 默认设置为 1 档
-        self.gear_slider.pack(pady=5)
-
-        # 添加标签，显示当前档位
-        self.gear_label = tk.Label(self.power_frame, text="Power17")
-        self.gear_label.pack(pady=5)
-
-        # 设置滑动条事件监听，更新标签显示当前档位
-        self.gear_slider.bind("<Motion>", self.update_gear)
+        # 创建顶部功能按钮
+        self.create_top_area()
 
         # 创建日志显示区域
         self.create_log_area()
 
+        # 创建动作类区域
+        self.creat_action_area()
+
+        # 创建动力类区域
+        self.creat_power_area()
+
+        # 创建辅助类区域
+        self.creat_aux_area()
+
+        """启动心跳线程"""
         # 启动一个独立线程，每秒输出布尔按钮的状态并添加心跳标志
         self.bool_thread = threading.Thread(target=self.output_bool_status)
         self.bool_thread.daemon = True  # 确保主程序退出时，线程也会退出
@@ -244,19 +226,46 @@ class ControlPanel:
                 # 忽略无法设置的子控件
                 pass
     
-    def create_top_area(self, text, command):
+    def create_top_area(self):
         """创建顶部按钮"""
+        # 添加功能按钮
+        self.create_top_button("开始测试", self.start_test)
+        self.create_top_button("停止测试", self.stop_test)
+        self.create_top_button("设置参数", self.set_parameters)
 
-    def creat_action_area(self, label, parent):
+    def creat_action_area(self):
         """创建动作区域"""
+        # 创建左侧滑动条和开关
+        for i in range(8):  # 创建 8 对滑动条和布尔开关
+            self.create_slider(f"Action{i+1}", self.action_frame)
+            self.create_switch(f"Send Data {i+1}", self.action_frame)
 
-    def creat_power_area(self, label, parent):
-        """创建动作区域"""
+        # 创建更新按钮
+        self.create_update_button(self.action_frame)
 
-    def creat_aux_area(self, label, parent):
-        """创建动作区域"""
+    def creat_power_area(self):
+        """创建动力区域"""
+        # 创建中间布尔值按钮
+        for i in range(16):
+            self.create_bool_button(f"power{i+1}", self.power_frame)
+        # 创建换挡的滑动条（模拟换挡杆）
+        self.gear_slider = tk.Scale(self.power_frame, from_=1, to=6, orient="horizontal", length=200, sliderlength=20)
+        self.gear_slider.set(1)  # 默认设置为 1 档
+        self.gear_slider.pack(pady=5)
 
-   
+        # 添加标签，显示当前档位
+        self.gear_label = tk.Label(self.power_frame, text="Power17")
+        self.gear_label.pack(pady=5)
+
+        # 设置滑动条事件监听，更新标签显示当前档位
+        self.gear_slider.bind("<Motion>", self.update_gear)
+
+    def creat_aux_area(self):
+        """创建辅助区域"""
+        # 创建辅助函数按钮
+        for i in range(3):
+            self.create_bool_button(f"aux{i+1}", self.aux_frame)
+
     def create_log_area(self):
         """创建日志显示区域"""
         # 使用 fill 和内外边距，左对齐，避免文字被下方组件遮挡
