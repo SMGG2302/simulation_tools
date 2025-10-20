@@ -164,12 +164,11 @@ class ControlPanel:
 
         # 创建中间布尔值按钮
         for i in range(21):
-            if i < 16:
-                self.create_bool_button(f"power{i+1}", self.power_frame)
-            elif i == 16:
-                continue
-            else:
-                self.create_bool_button(f"aux{i-17}", self.power_frame)
+            self.create_bool_button(f"power{i+1}", self.power_frame)
+        
+        # 创建辅助函数按钮
+        for i in range(3):
+            self.create_bool_button(f"aux{i+1}", self.aux_frame)
 
         # 创建更新按钮
         self.create_update_button(self.power_frame)
@@ -553,11 +552,9 @@ class ControlPanel:
                 if i < 16:
                     bool_status.append(f"power{i+1} {'True' if bool_var.get() else 'False'}")
                     self.update_queue[f"power{i+1}"] = 'True' if bool_var.get() else 'False'
-                elif i == 16:
-                    continue
                 else:
-                    bool_status.append(f"aux{i-16} {'1' if bool_var.get() else '0'}")
-                    self.update_queue[f"aux{i-16}"] = '1' if bool_var.get() else '0'
+                    bool_status.append(f"aux{i-15} {'1' if bool_var.get() else '0'}")
+                    self.update_queue[f"aux{i-15}"] = '1' if bool_var.get() else '0'
             
             time.sleep(0.1)  # 每秒输出一次布尔值状态
 
