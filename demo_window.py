@@ -452,36 +452,66 @@ class ControlPanel:
     def create_slider(self, label, parent):
         # 创建滑动条框架
         frame = tk.Frame(parent)
-        frame.pack(fill=tk.X, pady=2)
+        frame.pack(fill=tk.X, pady=4)
+
+        # 顶部标题标签，显示例如: Action1：127
+        title_label = tk.Label(frame, text=f"{label}：127", anchor='w')
+        title_label.pack(fill=tk.X, padx=5, pady=(0, 2))
+
+        # 横向容器：左侧放小按钮（发送,复位、-、+），右侧放滑动条
+        row = tk.Frame(frame)
+        row.pack(fill=tk.X, padx=5)
         
-        # 标签
-        label_widget = tk.Button(frame, text=label, command=lambda: self.reset_slider_by_label(label))
-        label_widget.pack(side=tk.LEFT, padx=5)
-        
-        # 创建当前值标签
-        current_val_label = tk.Label(frame, text="127", width=5)
-        current_val_label.pack(side=tk.RIGHT, padx=5)
-        
-        # 创建滑动条
-        slider = tk.Scale(frame, from_=0, to=255, orient="horizontal", 
-                         command=lambda val: self.update_slider_value(val, current_val_label))
+        # 小型复位按钮（置为中值）
+        reset_btn = tk.Button(row, text='复位', width=6, command=lambda l=label: self.reset_slider_by_label(l))
+        reset_btn.pack(side=tk.LEFT, padx=(0, 4))
+
+        # 减一按钮
+        dec_btn = tk.Button(row, text='−', width=3, command=lambda s_label=label: self._inc_dec_slider(s_label, -1))
+        dec_btn.pack(side=tk.LEFT, padx=(0, 4))
+
+        # 加一按钮
+        inc_btn = tk.Button(row, text='+', width=3, command=lambda s_label=label: self._inc_dec_slider(s_label, 1))
+        inc_btn.pack(side=tk.LEFT, padx=(0, 6))
+
+        # 滑动条，占据剩余空间
+        slider = tk.Scale(row, from_=0, to=255, orient="horizontal",
+                          command=lambda val, lbl=title_label, nm=label: self.update_slider_value(val, lbl, nm))
         slider.set(127)  # 默认初始值为127
-        slider.pack(fill=tk.X, padx=5)
-        
-        self.sliders.append((label, slider, current_val_label))
+        slider.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        # 存储：label 名称、slider 对象以及对应的标题标签（用于更新显示）
+        self.sliders.append((label, slider, title_label))
 
     def reset_slider_by_label(self, label):
         """通过标签重置对应的滑动条"""
         for slider_label, slider, label_widget in self.sliders:
             if slider_label == label:
                 slider.set(127)
-                label_widget.config(text="127")
+                label_widget.config(text=f"{label}：127")
                 break
 
-    def update_slider_value(self, value, label_widget):
-        """更新滑动条的当前值标签"""
-        label_widget.config(text=str(int(float(value))))
+    def update_slider_value(self, value, label_widget, label_name):
+        """更新滑动条的当前值标签，显示为 'LabelName：value'"""
+        try:
+            v = int(float(value))
+        except Exception:
+            v = 0
+        label_widget.config(text=f"{label_name}：{v}")
 
+    def _inc_dec_slider(self, label, delta):
+        """根据 label 找到对应 slider，增减 delta（±1），并更新显示"""
+        for slider_label, slider, label_widget in self.sliders:
+            if slider_label == label:
+                try:
+                    cur = int(slider.get())
+                except Exception:
+                    cur = 0
+                new = max(0, min(255, cur + delta))
+                slider.set(new)
+                label_widget.config(text=f"{label}：{new}")
+                break
+    
     def create_switch(self, label, parent):
         """创建布尔开关按钮"""
         frame = tk.Frame(parent)
@@ -503,7 +533,7 @@ class ControlPanel:
         def toggle(bvar=bool_var, btn=None):
             bvar.set(not bvar.get())
             if bvar.get():
-                btn.config(relief='sunken', bg='lightgreen')
+                btn.config(relief='sunken', bg='lightgrey')
             else:
                 btn.config(relief='raised', bg=default_bg)
 
