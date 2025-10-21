@@ -232,6 +232,7 @@ class ControlPanel:
         self.create_top_button("开始测试", self.start_test)
         self.create_top_button("停止测试", self.stop_test)
         self.create_top_button("设置参数", self.set_parameters)
+        self.create_top_button("订阅弹窗", self.show_subscriber_window)
 
     def creat_action_area(self):
         """创建动作区域"""
@@ -432,6 +433,72 @@ class ControlPanel:
         top.transient(self.root)
         top.grab_set()
 
+    def show_subscriber_window(self):
+        """打开订阅管理弹窗：左侧为控制区（按钮），右侧为订阅日志显示区。"""
+        top = tk.Toplevel(self.root)
+        top.title("订阅管理")
+        top.geometry("800x500")
+        # 尝试设置图标
+        try:
+            ico = resource_path('simulator.ico')
+            if sys.platform == 'win32':
+                top.iconbitmap(ico)
+            else:
+                try:
+                    top.iconphoto(True, self._icon_image)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # 主容器，左右两列
+        main = tk.Frame(top)
+        main.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+        main.grid_columnconfigure(0, weight=1, minsize=220)
+        main.grid_columnconfigure(1, weight=3)
+        main.grid_rowconfigure(0, weight=1)
+
+        # 左侧控制区
+        ctrl_frame = tk.LabelFrame(main, text="控制区", padx=6, pady=6)
+        ctrl_frame.grid(row=0, column=0, sticky="nsew", padx=(0,8), pady=4)
+
+        # 按钮示例（先显示，不实现具体功能）
+        tk.Button(ctrl_frame, text="开始订阅", width=18).pack(pady=4)
+        tk.Button(ctrl_frame, text="停止订阅", width=18).pack(pady=4)
+        tk.Button(ctrl_frame, text="订阅主题", width=18).pack(pady=4)
+        tk.Button(ctrl_frame, text="取消订阅", width=18).pack(pady=4)
+        tk.Button(ctrl_frame, text="修改主题", width=18).pack(pady=4)
+        tk.Button(ctrl_frame, text="清空日志", width=18, command=lambda: subscriber_log_text.configure(state='normal') or subscriber_log_text.delete('1.0', tk.END) or subscriber_log_text.configure(state='disabled')).pack(pady=4)
+
+        # 右侧日志区
+        log_frame = tk.LabelFrame(main, text="订阅日志", padx=4, pady=4)
+        log_frame.grid(row=0, column=1, sticky="nsew", pady=4)
+        log_frame.grid_rowconfigure(0, weight=1)
+        log_frame.grid_columnconfigure(0, weight=1)
+
+        subscriber_log_text = tk.Text(log_frame, state='disabled', wrap=tk.WORD)
+        vbar = tk.Scrollbar(log_frame, orient='vertical', command=subscriber_log_text.yview)
+        subscriber_log_text.configure(yscrollcommand=vbar.set)
+        subscriber_log_text.grid(row=0, column=0, sticky='nsew')
+        vbar.grid(row=0, column=1, sticky='ns')
+
+        # 将一个 TextRedirector 绑定到弹窗日志（可选：复用主窗口的 redirector）
+        # 这里不替换 sys.stdout，只提供一个写入函数供将来调用
+        def append_subscriber_log(msg: str):
+            try:
+                subscriber_log_text.configure(state='normal')
+                subscriber_log_text.insert(tk.END, msg)
+                subscriber_log_text.configure(state='disabled')
+                subscriber_log_text.see(tk.END)
+            except Exception:
+                pass
+
+        # 简单的示例：在弹窗打开时写入欢迎信息
+        append_subscriber_log("订阅管理窗口已打开\n")
+
+        # 使窗口模态（简单实现）
+        top.transient(self.root)
+        top.grab_set()
     def on_closing(self):
         """处理窗口关闭事件"""
         print("收到窗口关闭请求")
