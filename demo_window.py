@@ -406,6 +406,7 @@ class ControlPanel:
                 if 'mqtt' not in cfg:
                     cfg['mqtt'] = {}
                 cfg['mqtt']['broker'] = new_broker
+                cfg['mqtt']['simulation_broker'] = new_broker
                 if 'device_config' not in cfg['mqtt']:
                     cfg['mqtt']['device_config'] = {}
                 cfg['mqtt']['device_config']['device_serial'] = str(new_device)
