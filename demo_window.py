@@ -262,7 +262,7 @@ class ControlPanel:
     def creat_aux_area(self):
         """创建辅助区域"""
         # 创建辅助函数按钮
-        for i in range(3):
+        for i in range(10):
             self.create_bool_button(f"aux{i+1}", self.aux_frame)
 
     def create_log_area(self):
