@@ -181,10 +181,6 @@ class ControlPanel:
         self.heartbeat_value = 0  # 初始心跳值
         self.heartbeat_thread.start()
 
-        # 重定向标准输出到文本框
-        self.text_redirector = TextRedirector(self.log_text, self.root)
-        sys.stdout = self.text_redirector
-
         # 绑定窗口关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -301,6 +297,10 @@ class ControlPanel:
             print("已经请求启动MQTT连接，请勿重复请求")
         else:
             try:
+                # 重定向标准输出到文本框
+                self.text_redirector = TextRedirector(self.log_text, self.root)
+                sys.stdout = self.text_redirector
+
                 # 清除可能遗留的停止标志，防止问题
                 if '_stop_mqtt' in self.update_queue:
                     try:
@@ -447,26 +447,26 @@ class ControlPanel:
                 pass
         
         # 创建弹窗
-        top = tk.Toplevel(self.root)
-        self._subscriber_top = top
-        top.title("订阅管理")
-        top.geometry("1000x520")
+        self.subscriber_top = tk.Toplevel(self.root)
+        self._subscriber_top = self.subscriber_top
+        self.subscriber_top.title("订阅管理")
+        self.subscriber_top.geometry("1000x520")
 
         # 尝试设置图标（与主窗口一致）
         try:
             ico = resource_path('simulator.ico')
             if sys.platform == 'win32':
-                top.iconbitmap(ico)
+                self.subscriber_top.iconbitmap(ico)
             else:
                 try:
-                    top.iconphoto(True, self._icon_image)
+                    subscriber_top.iconphoto(True, self._icon_image)
                 except Exception:
                     pass
         except Exception:
             pass
 
         # 主容器（保持与主窗口相近的样式）
-        main = tk.Frame(top, bg=self.bg_color)
+        main = tk.Frame(self.subscriber_top, bg=self.bg_color)
         main.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         # 行列配置
         main.grid_rowconfigure(0, weight=0)   # 顶行，放按钮
@@ -523,9 +523,13 @@ class ControlPanel:
         log_text_frame.grid_rowconfigure(0, weight=1)
         log_text_frame.grid_columnconfigure(0, weight=1)
 
+        # 重定向标准输出到文本框
+        self.text_redirector = TextRedirector(log_text, self.subscriber_top)
+        sys.stdout = self.text_redirector
+
         # 模态化
-        top.transient(self.root)
-        top.grab_set()
+        self.subscriber_top.transient(self.root)
+        self.subscriber_top.grab_set()
 
     def start_subscribe(self):
         """开始订阅"""
