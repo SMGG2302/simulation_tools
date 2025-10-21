@@ -238,7 +238,6 @@ class ControlPanel:
         # 创建左侧滑动条和开关
         for i in range(8):  # 创建 8 对滑动条和布尔开关
             self.create_slider(f"Action{i+1}", self.action_frame)
-            self.create_switch(f"Send Data {i+1}", self.action_frame)
 
         # 创建更新按钮
         self.create_update_button(self.action_frame)
@@ -461,18 +460,21 @@ class ControlPanel:
         # 横向容器：左侧放小按钮（发送,复位、-、+），右侧放滑动条
         row = tk.Frame(frame)
         row.pack(fill=tk.X, padx=5)
+
+        # action选择按钮
+        self._create_send_button(row, '发送')
         
         # 小型复位按钮（置为中值）
-        reset_btn = tk.Button(row, text='复位', width=6, command=lambda l=label: self.reset_slider_by_label(l))
-        reset_btn.pack(side=tk.LEFT, padx=(0, 4))
+        reset_btn = tk.Button(row, text='复位', width=4, command=lambda l=label: self.reset_slider_by_label(l))
+        reset_btn.pack(side=tk.LEFT, padx=(0, 4), pady=(6, 0))
 
         # 减一按钮
-        dec_btn = tk.Button(row, text='−', width=3, command=lambda s_label=label: self._inc_dec_slider(s_label, -1))
-        dec_btn.pack(side=tk.LEFT, padx=(0, 4))
+        dec_btn = tk.Button(row, text='−', width=1, command=lambda s_label=label: self._inc_dec_slider(s_label, -1))
+        dec_btn.pack(side=tk.LEFT, padx=(0, 4), pady=(6, 0))
 
         # 加一按钮
-        inc_btn = tk.Button(row, text='+', width=3, command=lambda s_label=label: self._inc_dec_slider(s_label, 1))
-        inc_btn.pack(side=tk.LEFT, padx=(0, 6))
+        inc_btn = tk.Button(row, text='+', width=1, command=lambda s_label=label: self._inc_dec_slider(s_label, 1))
+        inc_btn.pack(side=tk.LEFT, padx=(0, 6), pady=(6, 0))
 
         # 滑动条，占据剩余空间
         slider = tk.Scale(row, from_=0, to=255, orient="horizontal",
@@ -512,14 +514,21 @@ class ControlPanel:
                 label_widget.config(text=f"{label}：{new}")
                 break
     
-    def create_switch(self, label, parent):
-        """创建布尔开关按钮"""
-        frame = tk.Frame(parent)
-        frame.pack(fill=tk.X, pady=2)
-        
-        bool_var = tk.BooleanVar()
-        switch = tk.Checkbutton(frame, text=label, variable=bool_var)
-        switch.pack(side=tk.LEFT, padx=5)
+    def _create_send_button(self, frame, label):
+        """创建 action 发送按钮"""
+        bool_var = tk.BooleanVar(value=False)
+
+        default_bg = frame.cget('bg')
+        def toggle(bvar=bool_var, btn=None):
+            bvar.set(not bvar.get())
+            if bvar.get():
+                btn.config(relief='sunken', bg='lightgrey')
+            else:
+                btn.config(relief='raised', bg=default_bg)
+
+        btn = tk.Button(frame, text=label, relief='raised')
+        btn.config(command=lambda b=btn: toggle(btn=b))
+        btn.pack(side=tk.LEFT, anchor='center', padx=5, pady=(6, 0))
         self.max_min_switches.append(bool_var)
 
     def create_bool_button(self, label, parent):
