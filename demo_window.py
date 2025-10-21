@@ -434,7 +434,8 @@ class ControlPanel:
         top.grab_set()
 
     def show_subscriber_window(self):
-        """显示订阅管理窗口
+        """
+        创建订阅管理窗口
         """
         # 如果弹窗已存在且还有效，则提升并返回
         if hasattr(self, '_subscriber_top') and self._subscriber_top and self._subscriber_top.winfo_exists():
@@ -444,7 +445,8 @@ class ControlPanel:
                 return
             except Exception:
                 pass
-
+        
+        # 创建弹窗
         top = tk.Toplevel(self.root)
         self._subscriber_top = top
         top.title("订阅管理")
@@ -477,12 +479,8 @@ class ControlPanel:
         top_buttons_frame = tk.Frame(main)
         top_buttons_frame.grid(row=0, column=0, columnspan=3, sticky='ew', pady=(0,6))
         # 放置若干功能按钮
-        tk.Button(top_buttons_frame, text="开始订阅", width=12).pack(side=tk.LEFT, padx=6)
-        tk.Button(top_buttons_frame, text="停止订阅", width=12).pack(side=tk.LEFT, padx=6)
-        tk.Button(top_buttons_frame, text="订阅主题", width=12).pack(side=tk.LEFT, padx=6)
-        tk.Button(top_buttons_frame, text="取消订阅", width=12).pack(side=tk.LEFT, padx=6)
-        tk.Button(top_buttons_frame, text="修改主题", width=12).pack(side=tk.LEFT, padx=6)
-        tk.Button(top_buttons_frame, text="清空日志", width=12).pack(side=tk.LEFT, padx=6)
+        tk.Button(top_buttons_frame, text="开始订阅", width=12, command=self.start_subscribe).pack(side=tk.LEFT, padx=6)
+        tk.Button(top_buttons_frame, text="停止订阅", width=12, command=self.stop_subscribe).pack(side=tk.LEFT, padx=6)
 
         # 左侧控制信号区
         ctrl_frame = tk.Frame(main, bg=self.bg_color)
@@ -528,6 +526,17 @@ class ControlPanel:
         # 模态化
         top.transient(self.root)
         top.grab_set()
+
+    def start_subscribe(self):
+        """开始订阅"""
+        print("开始订阅")
+        # self.update_queue['_start_mqtt'] = True
+
+    def stop_subscribe(self):
+        """停止订阅"""
+        print("停止订阅")
+        # self.update_queue['_stop_mqtt'] = True
+
     def on_closing(self):
         """处理窗口关闭事件"""
         print("收到窗口关闭请求")
