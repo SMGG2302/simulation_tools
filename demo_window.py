@@ -269,7 +269,7 @@ class ControlPanel:
     def create_log_area(self):
         """创建日志显示区域"""
         # 使用 fill 和内外边距，左对齐，避免文字被下方组件遮挡
-        log_label = tk.Label(self.log_frame, text="运行日志", font=("Arial", 10, "bold"), bg=self.bg_color)
+        log_label = tk.Label(self.log_frame, text="发送日志", font=("Arial", 10, "bold"), bg=self.bg_color)
         # side='top' 并横向填充，减少被下方内容遮挡的可能性；适当增加下边距
         log_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=10)
         
@@ -434,11 +434,23 @@ class ControlPanel:
         top.grab_set()
 
     def show_subscriber_window(self):
-        """打开订阅管理弹窗：左侧为控制区（按钮），右侧为订阅日志显示区。"""
+        """显示订阅管理窗口
+        """
+        # 如果弹窗已存在且还有效，则提升并返回
+        if hasattr(self, '_subscriber_top') and self._subscriber_top and self._subscriber_top.winfo_exists():
+            try:
+                self._subscriber_top.deiconify()
+                self._subscriber_top.lift()
+                return
+            except Exception:
+                pass
+
         top = tk.Toplevel(self.root)
+        self._subscriber_top = top
         top.title("订阅管理")
         top.geometry("1000x520")
-        # 尝试设置图标
+
+        # 尝试设置图标（与主窗口一致）
         try:
             ico = resource_path('simulator.ico')
             if sys.platform == 'win32':
@@ -451,8 +463,8 @@ class ControlPanel:
         except Exception:
             pass
 
-        # 主容器：使用 grid 布局，第一行一列放按钮，第二行三列（前两列空占位，第三列放日志）
-        main = tk.Frame(top)
+        # 主容器（保持与主窗口相近的样式）
+        main = tk.Frame(top, bg=self.bg_color)
         main.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         # 行列配置
         main.grid_rowconfigure(0, weight=0)   # 顶行，放按钮
@@ -461,59 +473,59 @@ class ControlPanel:
         main.grid_columnconfigure(1, weight=1, minsize=150)
         main.grid_columnconfigure(2, weight=3, minsize=400)
 
-        # 顶行：功能按钮（单行横向排列）
+        # 顶行功能按钮
         top_buttons_frame = tk.Frame(main)
         top_buttons_frame.grid(row=0, column=0, columnspan=3, sticky='ew', pady=(0,6))
-        # 放置若干功能按钮（目前不实现具体功能）
+        # 放置若干功能按钮
         tk.Button(top_buttons_frame, text="开始订阅", width=12).pack(side=tk.LEFT, padx=6)
         tk.Button(top_buttons_frame, text="停止订阅", width=12).pack(side=tk.LEFT, padx=6)
         tk.Button(top_buttons_frame, text="订阅主题", width=12).pack(side=tk.LEFT, padx=6)
         tk.Button(top_buttons_frame, text="取消订阅", width=12).pack(side=tk.LEFT, padx=6)
         tk.Button(top_buttons_frame, text="修改主题", width=12).pack(side=tk.LEFT, padx=6)
-        tk.Button(top_buttons_frame, text="清空日志", width=12, command=lambda: clear_subscriber_log()).pack(side=tk.LEFT, padx=6)
+        tk.Button(top_buttons_frame, text="清空日志", width=12).pack(side=tk.LEFT, padx=6)
 
-        # 第二行：三列布局，前两列占位（暂无功能），第三列为日志
-        # 前两列占位容器（可以未来扩展控件）
-        placeholder1 = tk.Frame(main, relief='flat')
-        placeholder1.grid(row=1, column=0, sticky='nsew', padx=(0,6))
+        # 左侧控制信号区
+        ctrl_frame = tk.Frame(main, bg=self.bg_color)
+        ctrl_frame.grid(row=1, column=0, sticky='nsew', padx=(0,6))
 
-        placeholder2 = tk.Frame(main, relief='flat')
-        placeholder2.grid(row=1, column=1, sticky='nsew', padx=(0,6))
+        # 创建左侧区域说明标签
+        ctrl_label = tk.Label(ctrl_frame, text='控制信号', font=('Arial', 10, 'bold'), bg=self.bg_color)
+        ctrl_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=(0,6))
 
-        # 第三列：日志显示区
-        log_frame = tk.LabelFrame(main, text="订阅日志", padx=4, pady=4)
-        log_frame.grid(row=1, column=2, sticky="nsew")
-        log_frame.grid_rowconfigure(0, weight=1)
-        log_frame.grid_columnconfigure(0, weight=1)
+        # 中间状态信号区
+        status_frame = tk.Frame(main, bg=self.bg_color)
+        status_frame.grid(row=1, column=1, sticky='nsew', padx=(0,6))
 
-        subscriber_log_text = tk.Text(log_frame, state='disabled', wrap=tk.WORD)
-        vbar = tk.Scrollbar(log_frame, orient='vertical', command=subscriber_log_text.yview)
-        subscriber_log_text.configure(yscrollcommand=vbar.set)
-        subscriber_log_text.grid(row=0, column=0, sticky='nsew')
-        vbar.grid(row=0, column=1, sticky='ns')
+        # 创建中间区域说明标签
+        status_label = tk.Label(status_frame, text='状态信号', font=('Arial', 10, 'bold'), bg=self.bg_color)
+        status_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=(0,6))
 
-        # 辅助函数：追加日志与清空日志
-        def append_subscriber_log(msg: str):
-            try:
-                subscriber_log_text.configure(state='normal')
-                subscriber_log_text.insert(tk.END, msg)
-                subscriber_log_text.configure(state='disabled')
-                subscriber_log_text.see(tk.END)
-            except Exception:
-                pass
+        # 右侧日志区域
+        log_frame = tk.Frame(main, bg=self.bg_color)
+        log_frame.grid(row=1, column=2, padx=5, pady=5, sticky="nsew")
 
-        def clear_subscriber_log():
-            try:
-                subscriber_log_text.configure(state='normal')
-                subscriber_log_text.delete('1.0', tk.END)
-                subscriber_log_text.configure(state='disabled')
-            except Exception:
-                pass
+        # 日志区域说明标签
+        log_label = tk.Label(log_frame, text='接收日志', font=('Arial', 10, 'bold'), bg=self.bg_color)
+        log_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=(0,6))
 
-        # 打开时写入欢迎信息
-        append_subscriber_log("订阅管理窗口已打开\n")
+        # 创建文本框和滚动条
+        log_text_frame = tk.Frame(log_frame)
+        log_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        log_text = tk.Text(log_text_frame, state='disabled', wrap=tk.WORD)
+        log_scrollbar_y = tk.Scrollbar(log_text_frame, orient="vertical", command=log_text.yview)
+        log_scrollbar_x = tk.Scrollbar(log_text_frame, orient="horizontal", command=log_text.xview)
+        log_text.configure(yscrollcommand=log_scrollbar_y.set, xscrollcommand=log_scrollbar_x.set)
+        
+        # 布局
+        log_text.grid(row=0, column=0, sticky="nsew")
+        log_scrollbar_y.grid(row=0, column=1, sticky="ns")
+        log_scrollbar_x.grid(row=1, column=0, sticky="ew")
+        
+        log_text_frame.grid_rowconfigure(0, weight=1)
+        log_text_frame.grid_columnconfigure(0, weight=1)
 
-        # 使窗口模态
+        # 模态化
         top.transient(self.root)
         top.grab_set()
     def on_closing(self):
