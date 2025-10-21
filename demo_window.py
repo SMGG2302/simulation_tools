@@ -437,7 +437,7 @@ class ControlPanel:
         """打开订阅管理弹窗：左侧为控制区（按钮），右侧为订阅日志显示区。"""
         top = tk.Toplevel(self.root)
         top.title("订阅管理")
-        top.geometry("800x500")
+        top.geometry("1000x520")
         # 尝试设置图标
         try:
             ico = resource_path('simulator.ico')
@@ -451,28 +451,38 @@ class ControlPanel:
         except Exception:
             pass
 
-        # 主容器，左右两列
+        # 主容器：使用 grid 布局，第一行一列放按钮，第二行三列（前两列空占位，第三列放日志）
         main = tk.Frame(top)
         main.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
-        main.grid_columnconfigure(0, weight=1, minsize=220)
-        main.grid_columnconfigure(1, weight=3)
-        main.grid_rowconfigure(0, weight=1)
+        # 行列配置
+        main.grid_rowconfigure(0, weight=0)   # 顶行，放按钮
+        main.grid_rowconfigure(1, weight=1)   # 第二行，可扩展
+        main.grid_columnconfigure(0, weight=1, minsize=450)
+        main.grid_columnconfigure(1, weight=1, minsize=150)
+        main.grid_columnconfigure(2, weight=3, minsize=400)
 
-        # 左侧控制区
-        ctrl_frame = tk.LabelFrame(main, text="控制区", padx=6, pady=6)
-        ctrl_frame.grid(row=0, column=0, sticky="nsew", padx=(0,8), pady=4)
+        # 顶行：功能按钮（单行横向排列）
+        top_buttons_frame = tk.Frame(main)
+        top_buttons_frame.grid(row=0, column=0, columnspan=3, sticky='ew', pady=(0,6))
+        # 放置若干功能按钮（目前不实现具体功能）
+        tk.Button(top_buttons_frame, text="开始订阅", width=12).pack(side=tk.LEFT, padx=6)
+        tk.Button(top_buttons_frame, text="停止订阅", width=12).pack(side=tk.LEFT, padx=6)
+        tk.Button(top_buttons_frame, text="订阅主题", width=12).pack(side=tk.LEFT, padx=6)
+        tk.Button(top_buttons_frame, text="取消订阅", width=12).pack(side=tk.LEFT, padx=6)
+        tk.Button(top_buttons_frame, text="修改主题", width=12).pack(side=tk.LEFT, padx=6)
+        tk.Button(top_buttons_frame, text="清空日志", width=12, command=lambda: clear_subscriber_log()).pack(side=tk.LEFT, padx=6)
 
-        # 按钮示例（先显示，不实现具体功能）
-        tk.Button(ctrl_frame, text="开始订阅", width=18).pack(pady=4)
-        tk.Button(ctrl_frame, text="停止订阅", width=18).pack(pady=4)
-        tk.Button(ctrl_frame, text="订阅主题", width=18).pack(pady=4)
-        tk.Button(ctrl_frame, text="取消订阅", width=18).pack(pady=4)
-        tk.Button(ctrl_frame, text="修改主题", width=18).pack(pady=4)
-        tk.Button(ctrl_frame, text="清空日志", width=18, command=lambda: subscriber_log_text.configure(state='normal') or subscriber_log_text.delete('1.0', tk.END) or subscriber_log_text.configure(state='disabled')).pack(pady=4)
+        # 第二行：三列布局，前两列占位（暂无功能），第三列为日志
+        # 前两列占位容器（可以未来扩展控件）
+        placeholder1 = tk.Frame(main, relief='flat')
+        placeholder1.grid(row=1, column=0, sticky='nsew', padx=(0,6))
 
-        # 右侧日志区
+        placeholder2 = tk.Frame(main, relief='flat')
+        placeholder2.grid(row=1, column=1, sticky='nsew', padx=(0,6))
+
+        # 第三列：日志显示区
         log_frame = tk.LabelFrame(main, text="订阅日志", padx=4, pady=4)
-        log_frame.grid(row=0, column=1, sticky="nsew", pady=4)
+        log_frame.grid(row=1, column=2, sticky="nsew")
         log_frame.grid_rowconfigure(0, weight=1)
         log_frame.grid_columnconfigure(0, weight=1)
 
@@ -482,8 +492,7 @@ class ControlPanel:
         subscriber_log_text.grid(row=0, column=0, sticky='nsew')
         vbar.grid(row=0, column=1, sticky='ns')
 
-        # 将一个 TextRedirector 绑定到弹窗日志（可选：复用主窗口的 redirector）
-        # 这里不替换 sys.stdout，只提供一个写入函数供将来调用
+        # 辅助函数：追加日志与清空日志
         def append_subscriber_log(msg: str):
             try:
                 subscriber_log_text.configure(state='normal')
@@ -493,10 +502,18 @@ class ControlPanel:
             except Exception:
                 pass
 
-        # 简单的示例：在弹窗打开时写入欢迎信息
+        def clear_subscriber_log():
+            try:
+                subscriber_log_text.configure(state='normal')
+                subscriber_log_text.delete('1.0', tk.END)
+                subscriber_log_text.configure(state='disabled')
+            except Exception:
+                pass
+
+        # 打开时写入欢迎信息
         append_subscriber_log("订阅管理窗口已打开\n")
 
-        # 使窗口模态（简单实现）
+        # 使窗口模态
         top.transient(self.root)
         top.grab_set()
     def on_closing(self):
