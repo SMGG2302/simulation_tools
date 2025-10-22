@@ -153,6 +153,9 @@ class ControlPanel:
         self.update_queue = {}  # 存储数据更新的字典
         self.previous_update_queue = {}  # 上次的更新字典
         self.bool_buttons = []  # 存储布尔按钮
+        self.update_queue['start_subscribe'] = False  # 初始化订阅状态为 False
+        self.update_queue['connect_status'] = False
+        self.update_queue['send_status'] = False
 
         # 创建顶部功能按钮
         self.create_top_area()
@@ -225,8 +228,10 @@ class ControlPanel:
     def create_top_area(self):
         """创建顶部按钮"""
         # 添加功能按钮
-        self.create_top_button("开始测试", self.start_test)
-        self.create_top_button("停止测试", self.stop_test)
+        self.create_top_button("开始连接", self.start_test)
+        self.create_top_button("停止连接", self.stop_test)
+        self.create_top_button("开始发送", self.start_send)
+        self.create_top_button("停止发送", self.stop_send)
         self.create_top_button("设置参数", self.set_parameters)
         self.create_top_button("订阅弹窗", self.show_subscriber_window)
 
@@ -293,7 +298,7 @@ class ControlPanel:
 
     def start_test(self):
         """开始测试功能"""
-        if self.update_queue and self.update_queue.get('start_connect_status') == True:
+        if self.update_queue and self.update_queue.get('connect_status') == True:
             print("已经请求启动MQTT连接，请勿重复请求")
         else:
             try:
@@ -309,29 +314,49 @@ class ControlPanel:
                         pass
                 # 将开始请求放入 update_queue，模拟器线程会检测并连接
                 self.update_queue['_start_mqtt'] = True
-                self.update_queue['start_connect_status'] = True
                 print("开始测试: 已请求启动 MQTT 连接")
             except Exception as e:
                 print(f"请求开始测试失败: {e}")
 
     def stop_test(self):
         """停止测试功能"""
-        if self.update_queue and self.update_queue.get('start_connect_status') == False:
+        if self.update_queue and self.update_queue.get('connect_status') == False:
             print("已经请求停止MQTT连接，请勿重复请求")
         else:
             try:
                 print("停止测试: 请求停止 MQTT 连接")
                 # 将停止请求放入 update_queue，模拟器线程会检测并断开连接
                 self.update_queue['_stop_mqtt'] = True
-                self.update_queue['start_connect_status'] = False
+                self.update_queue['connect_status'] = False
                 print("已请求停止MQTT连接")
             except Exception as e:
                 print(f"设置停止标志失败: {e}")
 
+    def start_send(self):
+        """开始发送功能"""
+        if self.update_queue and self.update_queue.get('connect_status') == False:
+            print("MQTT 未连接，请先启动 MQTT 连接")
+        else:
+            if self.update_queue and self.update_queue.get('start_send') == True:
+                print("已经请求启动信号发送，请勿重复请求")
+            else:
+                self.update_queue['start_send'] = True
+                print("已请求启动信号发送")
+
+    def stop_send(self):
+        """停止发送功能"""
+        if self.update_queue and self.update_queue.get('connect_status') == False:
+            print("MQTT 未连接，必然无法发送控制信号")
+        else:
+            if self.update_queue and self.update_queue.get('stop_send') == True:
+                print("已经请求停止信号发送，请勿重复请求")
+            else:
+                self.update_queue['stop_send'] = True
+
     def set_parameters(self):
         """设置参数功能：仅当 MQTT 未连接时生效，弹出窗口设置 broker、设备号和机型，并写回 config.json。"""
-        # 仅在 MQTT 未连接（start_connect_status == False）时允许设置
-        if self.update_queue and self.update_queue.get('start_connect_status'):
+        # 仅在 MQTT 未连接（connect_status == False）时允许设置
+        if self.update_queue and self.update_queue.get('connect_status'):
             print("MQTT 正在连接或已连接，无法修改参数，请先停止 MQTT 后再设置。")
             return
 
@@ -534,12 +559,12 @@ class ControlPanel:
     def start_subscribe(self):
         """开始订阅"""
         print("开始订阅")
-        # self.update_queue['_start_mqtt'] = True
+        self.update_queue['start_subscribe'] = True
 
     def stop_subscribe(self):
         """停止订阅"""
         print("停止订阅")
-        # self.update_queue['_stop_mqtt'] = True
+        self.update_queue['start_subscribe'] = False
 
     def on_closing(self):
         """处理窗口关闭事件"""

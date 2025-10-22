@@ -38,6 +38,10 @@ class  MainScreenSimulator:
             client_id_prefix = current_mqtt_config.get('client_id_prefix', 'excavator_ctrl_')
             self.safe_topic = current_mqtt_config['safe_topic']
             self.control_topic_base = current_mqtt_config['control_topic_base']
+            self.status_topics = current_mqtt_config['status_topics']
+            self.internal_status_topic = self.status_topics.get('internal_status')
+            self.external_status_topic = self.status_topics.get('external_equipment_status')
+
 
             random_suffix = ''.join(random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=8))
             self.client_id = client_id_prefix + random_suffix
@@ -97,7 +101,18 @@ class  MainScreenSimulator:
 
         print("已启动发送控制信号和心跳")
         return True
-   
+    
+    def start_rec_signal(self):
+        """启动接收控制信号"""
+        self.rec_running=True
+        #启动状态信号接收线程
+        self.status_thread=threading.Thread(target=self.status_task,name="status_thread")
+        self.status_thread.daemon = True
+        self.status_thread.start()
+
+        print("已启动接收状态信号")
+        return True
+    
     def time_for_send_signal(self):
         get_mqtt_protocol_timeouts=self.config_manager.get_mqtt_protocol_timeouts()
         send_times = get_mqtt_protocol_timeouts.get('heartbeat_detection_interval_sec', 1)
@@ -211,7 +226,59 @@ class  MainScreenSimulator:
         except Exception as e:
             print(f"发送控制信号时发生错误: {e}")
             return False
+        
+    # 状态信号接收功能函数
+    def status_task(self):
+        """状态信号接收线程"""
+        while self.running and not self.shutdown_event.is_set():
+            try:
+                if self.update_queue.get('start_subscribe'):
+                    pass
+                else:
+                    self.client.unsubscribe(self.internal_status_topic)
+                    self.client.unsubscribe(self.external_status_topic)
+                    print("已停止状态信号接收")
+            except Exception as e:
+                print(f"状态信号接收线程发生错误: {e}")
+                time.sleep(0.1)
 
+            self.rec_status_signals()
+            print("已启动状态信号接收")
+
+
+    def rec_status_signals(self):
+        """接收状态信号"""
+        if not self.is_connected or not self.status_topics:
+            print("无法接收状态信号,因为MQTT客户端未连接到服务器或者没有状态主题")
+            return False
+        
+        try:
+            # 接收内部状态信号
+            if self.internal_status_topic:
+                print(f"正在订阅内部状态主题: {self.internal_status_topic}")
+                result,_ = self.client.subscribe(self.internal_status_topic)
+                if result == mqtt.MQTT_ERR_SUCCESS:
+                    print(f"已订阅内部状态主题: {self.internal_status_topic}")
+                else:
+                    print(f"订阅内部状态主题失败: {result}")
+            else:
+                print("未配置内部状态主题，跳过订阅")
+                pass
+            # 接收外部状态信号
+            if self.external_status_topic:
+                print(f"正在订阅外部设备状态主题: {self.external_status_topic}")
+                result,_ = self.client.subscribe(self.external_status_topic)
+                if result == mqtt.MQTT_ERR_SUCCESS:
+                    print(f"已订阅外部设备状态主题: {self.external_status_topic}")
+                else:
+                    print(f"订阅外部设备状态主题失败: {result}")
+            else:
+                print("未配置外部设备状态主题，跳过订阅")
+                pass
+                
+        except Exception as e:
+            print(f"接收状态信号时发生错误: {e}")
+            return False
 
     '''手动断连功能函数'''
     def disconnect(self):
