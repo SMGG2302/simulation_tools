@@ -229,8 +229,8 @@ class ControlPanel:
     def create_top_area(self):
         """创建顶部按钮"""
         # 添加功能按钮
-        self.create_top_button("开始连接", self.start_test)
-        self.create_top_button("停止连接", self.stop_test)
+        self.create_top_button("开始连接", self.start_connect)
+        self.create_top_button("停止连接", self.stop_connect)
         self.create_top_button("开始发送", self.start_send)
         self.create_top_button("停止发送", self.stop_send)
         self.create_top_button("设置参数", self.set_parameters)
@@ -297,7 +297,7 @@ class ControlPanel:
         button = tk.Button(self.top_frame, text=text, command=command)
         button.pack(side=tk.LEFT, padx=5, pady=5)
 
-    def start_test(self):
+    def start_connect(self):
         """开始测试功能"""
         if self.update_queue and self.update_queue.get('connect_status') == True:
             print("已经请求启动MQTT连接，请勿重复请求")
@@ -319,7 +319,7 @@ class ControlPanel:
             except Exception as e:
                 print(f"请求开始测试失败: {e}")
 
-    def stop_test(self):
+    def stop_connect(self):
         """停止测试功能"""
         if self.update_queue and self.update_queue.get('connect_status') == False:
             print("已经请求停止MQTT连接，请勿重复请求")
@@ -549,13 +549,65 @@ class ControlPanel:
         log_text_frame.grid_rowconfigure(0, weight=1)
         log_text_frame.grid_columnconfigure(0, weight=1)
 
-        # 重定向标准输出到文本框
-        self.text_redirector = TextRedirector(log_text, self.subscriber_top)
-        sys.stdout = self.text_redirector
+        # 重定向标准输出到弹窗文本框：先保存当前 stdout 与现有 redirector，关闭时恢复
+        try:
+            prev_stdout = sys.stdout
+            prev_redirector = getattr(self, 'text_redirector', None)
+            subscriber_redirector = TextRedirector(log_text, self.subscriber_top)
+            # 将当前 stdout 替换为弹窗 redirector（临时）
+            sys.stdout = subscriber_redirector
+            # 保存引用以便关闭时恢复
+            self._subscriber_text_redirector = subscriber_redirector
+            self._subscriber_prev_stdout = prev_stdout
+            self._subscriber_prev_redirector = prev_redirector
+        except Exception:
+            pass
 
         # 模态化
         self.subscriber_top.transient(self.root)
         self.subscriber_top.grab_set()
+
+        # 关闭回调：仅在当前 stdout 仍为弹窗 redirector 时恢复之前的 stdout
+        def _on_subscriber_close():
+            # 停止订阅
+            try:
+                self.stop_subscribe()
+            except Exception:
+                pass
+            # 恢复 stdout
+            try:
+                if getattr(sys, 'stdout', None) is getattr(self, '_subscriber_text_redirector', None):
+                    # 恢复之前保存的 stdout（优先恢复具体保存的 prev_stdout）
+                    if hasattr(self, '_subscriber_prev_stdout') and self._subscriber_prev_stdout:
+                        sys.stdout = self._subscriber_prev_stdout
+                    elif hasattr(self, '_subscriber_prev_redirector') and self._subscriber_prev_redirector:
+                        sys.stdout = self._subscriber_prev_redirector
+            except Exception:
+                pass
+            # 关闭弹窗 redirector
+            try:
+                if hasattr(self, '_subscriber_text_redirector'):
+                    self._subscriber_text_redirector.close()
+            except Exception:
+                pass
+            # 释放 grab 并销毁窗口
+            try:
+                self.subscriber_top.grab_release()
+            except Exception:
+                pass
+            try:
+                self.subscriber_top.destroy()
+            except Exception:
+                pass
+            # 清理临时引用
+            try:
+                for attr in ('_subscriber_text_redirector', '_subscriber_prev_stdout', '_subscriber_prev_redirector', '_subscriber_top', 'subscriber_top'):
+                    if hasattr(self, attr):
+                        delattr(self, attr)
+            except Exception:
+                pass
+
+        self.subscriber_top.protocol('WM_DELETE_WINDOW', _on_subscriber_close)
 
     def start_subscribe(self):
         """开始订阅"""

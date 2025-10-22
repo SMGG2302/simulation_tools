@@ -48,6 +48,7 @@ class  MainScreenSimulator:
 
             self.client=mqtt.Client(client_id=self.client_id, clean_session=True)
             self.client.on_connect=self.on_connect                        #设置连接MQTT服务器的回调函数
+            self.client.on_message=self.on_message                        #设置接收消息的回调函数
             self.client.on_disconnect=self.on_disconnect                  #设置断开MQTT服务器的回调函数
             if username and password:
                 self.client.username_pw_set(username, password)   #添加用户名和密码
@@ -230,9 +231,9 @@ class  MainScreenSimulator:
     # 状态信号接收功能函数
     def status_task(self):
         """状态信号接收线程"""
-        while self.running and not self.shutdown_event.is_set():
+        while self.rec_running and not self.shutdown_event.is_set():
             try:
-                if self.is_connected():
+                if self.update_queue.get('connect_status'):
                     self.rec_status_signals()
                     print("已启动状态信号接收")
                 else:
@@ -251,9 +252,10 @@ class  MainScreenSimulator:
             # 接收内部状态信号
             if self.internal_status_topic:
                 print(f"正在订阅内部状态主题: {self.internal_status_topic}")
-                result,_ = self.client.subscribe(self.internal_status_topic)
+                result, _ = self.client.subscribe(self.internal_status_topic)
                 if result == mqtt.MQTT_ERR_SUCCESS:
                     print(f"已订阅内部状态主题: {self.internal_status_topic}")
+
                 else:
                     print(f"订阅内部状态主题失败: {result}")
             else:
@@ -262,7 +264,7 @@ class  MainScreenSimulator:
             # 接收外部状态信号
             if self.external_status_topic:
                 print(f"正在订阅外部设备状态主题: {self.external_status_topic}")
-                result,_ = self.client.subscribe(self.external_status_topic)
+                result, _ = self.client.subscribe(self.external_status_topic)
                 if result == mqtt.MQTT_ERR_SUCCESS:
                     print(f"已订阅外部设备状态主题: {self.external_status_topic}")
                 else:
@@ -274,6 +276,37 @@ class  MainScreenSimulator:
         except Exception as e:
             print(f"接收状态信号时发生错误: {e}")
             return False
+
+    def on_message(self, client, userdata, msg):
+        """MQTT 消息到达回调：打印主题和负载，尝试 JSON 解析，并将结果放入 update_queue 供外层使用。"""
+        try:
+            topic = msg.topic
+            payload_bytes = msg.payload
+            try:
+                payload = payload_bytes.decode('utf-8')
+            except Exception:
+                # 非 utf-8：以 repr 形式保存
+                payload = repr(payload_bytes)
+
+            # 打印原始接收内容
+            print(f"接收消息: {topic} -> {payload}")
+
+            # 尝试解析 JSON
+            parsed = None
+            try:
+                parsed = json.loads(payload)
+            except Exception:
+                parsed = None
+
+            # 将接收到的数据记录到 update_queue，键名使用 recv:<topic>
+            try:
+                key = f"recv:{topic}"
+                # 如果解析成功，则放入解析后的结构，否则放原始字符串
+                self.update_queue[key] = parsed if parsed is not None else payload
+            except Exception:
+                pass
+        except Exception as e:
+            print(f"处理接收消息时发生错误: {e}")
 
     '''手动断连功能函数'''
     def disconnect(self):
