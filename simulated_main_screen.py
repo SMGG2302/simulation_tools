@@ -100,11 +100,13 @@ def run_simulator(stop_flag, config_manager):
                         # print("未收到开始信号")
                         pass
                     # 检查是否收到订阅请求, 如果收到，启动接收线程
-                    if simulator_mian_screen.update_queue.get('start_subscribe'):
+                    if simulator_mian_screen.update_queue.get('start_subscribe') and simulator_mian_screen.update_queue.get('subscribe_status') == False:
                         if simulator_mian_screen.start_rec_signal():
                             print("启动接收线程")
+                            simulator_mian_screen.update_queue['subscribe_status'] = True
                         else:
                             print("启动接收失败")
+                            simulator_mian_screen.update_queue['subscribe_status'] = False
                     else:
                         # print("未收到订阅请求")
                         pass
@@ -119,6 +121,7 @@ def run_simulator(stop_flag, config_manager):
                         except:
                             pass
                         simulator_mian_screen.stop_send_signal()
+                        simulator_mian_screen.stop_rec_signal()
                         simulator_mian_screen.disconnect()
                         # 标记 GUI 中的连接状态为 False（若 GUI 在检查该值）
                         try:
@@ -133,6 +136,14 @@ def run_simulator(stop_flag, config_manager):
                         simulator_mian_screen.update_queue['send_status'] = False
                         simulator_mian_screen.update_queue['stop_send'] = False
                         simulator_mian_screen.update_queue['start_send'] = False
+
+                    # 检查是否收到停止接收请求
+                    if simulator_mian_screen.update_queue.get('stop_subscribe') and simulator_mian_screen.update_queue.get('subscribe_status'):
+                        print("收到停止接收请求，正在停止接收...")
+                        simulator_mian_screen.stop_rec_signal()
+                        simulator_mian_screen.update_queue['subscribe_status'] = False
+                        simulator_mian_screen.update_queue['stop_subscribe'] = False
+                        simulator_mian_screen.update_queue['start_subscribe'] = False
 
                     # 检查是否收到重新加载配置请求
                     if simulator_mian_screen.update_queue and simulator_mian_screen.update_queue.get('_reload_config'):

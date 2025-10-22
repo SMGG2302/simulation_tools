@@ -156,6 +156,7 @@ class ControlPanel:
         self.update_queue['start_subscribe'] = False  # 初始化订阅状态为 False
         self.update_queue['connect_status'] = False
         self.update_queue['send_status'] = False
+        self.update_queue['subscribe_status'] = False
 
         # 创建顶部功能按钮
         self.create_top_area()
@@ -558,13 +559,19 @@ class ControlPanel:
 
     def start_subscribe(self):
         """开始订阅"""
-        print("开始订阅")
-        self.update_queue['start_subscribe'] = True
+        if self.update_queue.get('start_subscribe') or self.update_queue.get('subscribe_status') == True:
+            print("已经请求开始订阅或订阅已开始，请勿重复请求")
+        else:
+            print("开始订阅")
+            self.update_queue['start_subscribe'] = True
 
     def stop_subscribe(self):
         """停止订阅"""
-        print("停止订阅")
-        self.update_queue['start_subscribe'] = False
+        if self.update_queue.get('stop_subscribe') or self.update_queue.get('subscribe_status') == False:
+            print("已经请求停止订阅或订阅未开始，请勿重复请求")
+        else:
+            print("停止订阅")
+            self.update_queue['stop_subscribe'] = True
 
     def on_closing(self):
         """处理窗口关闭事件"""

@@ -232,19 +232,14 @@ class  MainScreenSimulator:
         """状态信号接收线程"""
         while self.running and not self.shutdown_event.is_set():
             try:
-                if self.update_queue.get('start_subscribe'):
-                    pass
+                if self.is_connected():
+                    self.rec_status_signals()
+                    print("已启动状态信号接收")
                 else:
-                    self.client.unsubscribe(self.internal_status_topic)
-                    self.client.unsubscribe(self.external_status_topic)
-                    print("已停止状态信号接收")
+                    print("未连接到MQTT服务器，请检查网络连接")
             except Exception as e:
                 print(f"状态信号接收线程发生错误: {e}")
                 time.sleep(0.1)
-
-            self.rec_status_signals()
-            print("已启动状态信号接收")
-
 
     def rec_status_signals(self):
         """接收状态信号"""
@@ -299,3 +294,14 @@ class  MainScreenSimulator:
             self.control_thread.join(timeout=1)
             
         print("已停止发送信号和心跳")
+
+    def stop_rec_signal(self):
+        """停止接收状态信号"""
+        print("正在停止接收信号...")
+        self.rec_running=False
+        
+        # 等待线程结束，但设置超时时间
+        if self.status_thread and self.status_thread.is_alive():
+            self.status_thread.join(timeout=1)
+            
+        print("已停止接收状态信号")
