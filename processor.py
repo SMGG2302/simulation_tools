@@ -231,16 +231,21 @@ class  MainScreenSimulator:
     # 状态信号接收功能函数
     def status_task(self):
         """状态信号接收线程"""
-        while self.rec_running and not self.shutdown_event.is_set():
+        if self.rec_running and not self.shutdown_event.is_set():
             try:
                 if self.update_queue.get('connect_status'):
-                    self.rec_status_signals()
-                    print("已启动状态信号接收")
+                    if self.update_queue.get('subscribe_status') == True:
+                        pass
+                    else:
+                        self.rec_status_signals()
+                        print("已启动状态信号接收")
                 else:
                     print("未连接到MQTT服务器，请检查网络连接")
             except Exception as e:
                 print(f"状态信号接收线程发生错误: {e}")
                 time.sleep(0.1)
+        else:
+            print("状态信号接收线程未运行或已收到关闭信号")
 
     def rec_status_signals(self):
         """接收状态信号"""
