@@ -476,7 +476,7 @@ class ControlPanel:
         self.subscriber_top = tk.Toplevel(self.root)
         self._subscriber_top = self.subscriber_top
         self.subscriber_top.title("订阅管理")
-        self.subscriber_top.geometry("1000x520")
+        self.subscriber_top.geometry("1200x900")
 
         # 尝试设置图标（与主窗口一致）
         try:

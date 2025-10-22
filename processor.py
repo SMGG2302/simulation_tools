@@ -291,20 +291,20 @@ class  MainScreenSimulator:
             # 打印原始接收内容
             print(f"接收消息: {topic} -> {payload}")
 
-            # 尝试解析 JSON
-            parsed = None
-            try:
-                parsed = json.loads(payload)
-            except Exception:
-                parsed = None
+            # # 尝试解析 JSON
+            # parsed = None
+            # try:
+            #     parsed = json.loads(payload)
+            # except Exception:
+            #     parsed = None
 
-            # 将接收到的数据记录到 update_queue，键名使用 recv:<topic>
-            try:
-                key = f"recv:{topic}"
-                # 如果解析成功，则放入解析后的结构，否则放原始字符串
-                self.update_queue[key] = parsed if parsed is not None else payload
-            except Exception:
-                pass
+            # # 将接收到的数据记录到 update_queue，键名使用 recv:<topic>
+            # try:
+            #     key = f"recv:{topic}"
+            #     # 如果解析成功，则放入解析后的结构，否则放原始字符串
+            #     self.update_queue[key] = parsed if parsed is not None else payload
+            # except Exception:
+            #     pass
         except Exception as e:
             print(f"处理接收消息时发生错误: {e}")
 
