@@ -153,6 +153,7 @@ class ControlPanel:
         self.update_queue = {}  # 存储数据更新的字典
         self.previous_update_queue = {}  # 上次的更新字典
         self.bool_buttons = []  # 存储布尔按钮
+        self.rec_bool_buttons = {}  # 存储接收信号按钮的字典
         self.update_queue['start_subscribe'] = False  # 初始化订阅状态为 False
         self.update_queue['connect_status'] = False
         self.update_queue['send_status'] = False
@@ -525,9 +526,25 @@ class ControlPanel:
         ctrl_frame = tk.Frame(main, bg=self.bg_color)
         ctrl_frame.grid(row=1, column=0, sticky='nsew', padx=(0,6))
 
+        ctrl_frame.grid_columnconfigure(0, weight=1)
+        ctrl_frame.grid_columnconfigure(1, weight=1)
+        ctrl_frame.grid_columnconfigure(2, weight=1)
+        ctrl_frame.grid_rowconfigure(0, weight=0)
+        ctrl_frame.grid_rowconfigure(1, weight=1)
+
         # 创建左侧区域说明标签
         ctrl_label = tk.Label(ctrl_frame, text='控制信号', font=('Arial', 10, 'bold'), bg=self.bg_color)
-        ctrl_label.pack(side=tk.TOP, fill=tk.X, padx=6, pady=(0,6))
+        ctrl_label.grid(row=0, column=0, columnspan=3, sticky='ew', padx=6, pady=(0,6))
+
+        # 创建左侧控制信号分区
+        ctrl_action_frame = tk.Frame(ctrl_frame, bg=self.bg_color)
+        ctrl_action_frame.grid(row=1, column=0, sticky='nsew', padx=6, pady=(0,6))
+
+        ctrl_power_frame = tk.Frame(ctrl_frame, bg=self.bg_color)
+        ctrl_power_frame.grid(row=1, column=1, sticky='nsew', padx=6, pady=(0,6))
+        
+        ctrl_aux_frame = tk.Frame(ctrl_frame, bg=self.bg_color)
+        ctrl_aux_frame.grid(row=1, column=2, sticky='nsew', padx=6, pady=(0,6))
 
         # 中间状态信号区
         status_frame = tk.Frame(main, bg=self.bg_color)
@@ -561,6 +578,39 @@ class ControlPanel:
         
         log_text_frame.grid_rowconfigure(0, weight=1)
         log_text_frame.grid_columnconfigure(0, weight=1)
+
+        # 创建订阅功能按钮
+        def create_rec_bool_button(label, parent):
+            """创建布尔值按钮"""
+            frame = tk.Frame(parent, bg=self.bg_color)
+            frame.pack(fill=tk.X, pady=2)
+
+            bool_var = tk.BooleanVar(value=False)
+
+            default_bg = frame.cget('bg')
+            def toggle(bvar=bool_var, btn=None):
+                bvar.set(not bvar.get())
+                if bvar.get():
+                    btn.config(relief='sunken', bg='lightgrey')
+                else:
+                    btn.config(relief='raised', bg=default_bg)
+
+            btn = tk.Button(frame, text=label, relief='raised')
+            btn.config(command=lambda b=btn: toggle(btn=b))
+            btn.pack(side=tk.TOP, anchor='center', padx=5)
+            self.rec_bool_buttons[label] = bool_var
+
+        # 创建状态订阅功能按钮
+        create_rec_bool_button("internal", status_frame)
+        create_rec_bool_button("external", status_frame)
+
+        # 创建控制订阅功能按钮
+        for i in range(1, 9):
+            create_rec_bool_button(f"action{i}", ctrl_action_frame)
+        for i in range(1, 18):
+            create_rec_bool_button(f"power{i}", ctrl_power_frame)
+        for i in range(1, 11):
+            create_rec_bool_button(f"aux{i}", ctrl_aux_frame)
 
         # 重定向标准输出到弹窗文本框：先保存当前 stdout 与现有 redirector，关闭时恢复
         try:
