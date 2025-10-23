@@ -168,28 +168,6 @@ class  MainScreenSimulator:
         """控制线程"""
         send_count=0
         while self.running and not self.shutdown_event.is_set():
-            # 在发送控制信号前，检查外部指令（比如 GUI 写入的停止请求）
-            try:
-                if self.update_queue and '_stop_mqtt' in self.update_queue:
-                    # 收到停止 MQTT 的请求，进行安全清理
-                    print("收到停止 MQTT 请求，正在停止发送并断开连接...")
-                    # 清理运行标志，停止心跳和控制线程
-                    self.running = False
-                    # 主动断开连接并停止 loop
-                    try:
-                        self.disconnect()
-                    except Exception as e:
-                        print(f"断开 MQTT 时出错: {e}")
-                    # 移除停止标志以避免重复处理
-                    try:
-                        del self.update_queue['_stop_mqtt']
-                    except:
-                        pass
-                    break
-
-            except Exception as e:
-                print(f"检查停止请求时出错: {e}")
-
             if self.is_connected:  
                 self.send_control_signals()
                 send_count+=1

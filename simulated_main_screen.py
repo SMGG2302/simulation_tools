@@ -69,7 +69,7 @@ def run_simulator(stop_flag, config_manager):
     )
 
     try:
-        print("等待 GUI 发起开始测试 (_start_mqtt) 请求...")
+        print("等待 GUI 发起开始测试 (start_mqtt) 请求...")
         # 循环等待 GUI 发起开始请求，支持重复开始/停止
         while not stop_flag.is_set() and not shutdown_event.is_set():
             try:
@@ -77,12 +77,12 @@ def run_simulator(stop_flag, config_manager):
                 simulator_main_screen.update_queue = update_queue
 
                 # 如果 GUI 请求开始且当前未连接，启动连接并发送线程
-                if simulator_main_screen.update_queue and simulator_main_screen.update_queue.get('_start_mqtt'):
+                if simulator_main_screen.update_queue and simulator_main_screen.update_queue.get('start_mqtt'):
                     print("收到开始请求，尝试连接 MQTT...")                    
                     if simulator_main_screen.connect():
                         print("连接MQTT成功")
                         simulator_main_screen.update_queue['connect_status'] = True
-                        simulator_main_screen.update_queue['_start_mqtt'] = False  # 重置开始请求标志
+                        simulator_main_screen.update_queue['start_mqtt'] = False  # 重置开始请求标志
                     else:
                         print("连接MQTT失败")
                         simulator_main_screen.update_queue['connect_status'] = False
@@ -114,20 +114,14 @@ def run_simulator(stop_flag, config_manager):
                 # 检查是否收到停止请求（来自 GUI）
                 try:
                     # 检测是否收到停止mqtt连接请求
-                    if simulator_main_screen.is_connected and simulator_main_screen.update_queue and simulator_main_screen.update_queue.get('_stop_mqtt'):
+                    if simulator_main_screen.is_connected and simulator_main_screen.update_queue and simulator_main_screen.update_queue.get('stop_mqtt'):
                         print("收到停止请求(来自 GUI),正在断开...")
-                        try:
-                            del simulator_main_screen.update_queue['_stop_mqtt']
-                        except:
-                            pass
+                        simulator_main_screen.update_queue['stop_mqtt'] = False
                         simulator_main_screen.stop_send_signal()
                         simulator_main_screen.stop_rec_signal()
                         simulator_main_screen.disconnect()
                         # 标记 GUI 中的连接状态为 False（若 GUI 在检查该值）
-                        try:
-                            simulator_main_screen.update_queue['connect_status'] = False
-                        except:
-                            pass
+                        simulator_main_screen.update_queue['connect_status'] = False
                     
                     # 检测是否收到发送停止请求
                     if simulator_main_screen.update_queue.get('stop_send') and simulator_main_screen.update_queue.get('send_status'):

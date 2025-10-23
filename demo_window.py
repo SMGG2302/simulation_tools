@@ -304,38 +304,37 @@ class ControlPanel:
     def start_connect(self):
         """开始测试功能"""
         if self.update_queue and self.update_queue.get('connect_status') == True:
-            print("已经请求启动MQTT连接，请勿重复请求")
-        else:
-            try:
-                # # 重定向标准输出到文本框
-                # self.text_redirector = TextRedirector(self.log_text, self.root)
-                # sys.stdout = self.text_redirector
-
-                # 清除可能遗留的停止标志，防止问题
-                if '_stop_mqtt' in self.update_queue:
-                    try:
-                        del self.update_queue['_stop_mqtt']
-                    except:
-                        pass
-                # 将开始请求放入 update_queue，模拟器线程会检测并连接
-                self.update_queue['_start_mqtt'] = True
-                print("开始测试: 已请求启动 MQTT 连接")
-            except Exception as e:
-                print(f"请求开始测试失败: {e}")
+            print("MQTT连接已连接，请勿重复请求")
+            return
+        if self.update_queue and self.update_queue.get('start_mqtt') == True:
+            print("发送连接请求已发出，请稍候")
+            return
+        try:
+            # 将开始请求放入 update_queue，模拟器线程会检测并连接
+            self.update_queue['start_mqtt'] = True
+            print("开始测试: 已请求启动 MQTT 连接")
+        except Exception as e:
+            print(f"请求开始测试失败: {e}")
 
     def stop_connect(self):
         """停止测试功能"""
         if self.update_queue and self.update_queue.get('connect_status') == False:
-            print("已经请求停止MQTT连接，请勿重复请求")
-        else:
-            try:
-                print("停止测试: 请求停止 MQTT 连接")
-                # 将停止请求放入 update_queue，模拟器线程会检测并断开连接
-                self.update_queue['_stop_mqtt'] = True
-                self.update_queue['connect_status'] = False
-                print("已请求停止MQTT连接")
-            except Exception as e:
-                print(f"设置停止标志失败: {e}")
+            print("MQTT连接已断开，请勿重复请求")
+            return
+        if self.update_queue and self.update_queue.get('send_status') == True:
+            print("仍处于发送中，请先停止")
+            return
+        if self.update_queue and self.update_queue.get('stop_send') == True:
+            print("发送停止请求已发出，请稍候")
+            return
+        try:
+            print("停止测试: 请求停止 MQTT 连接")
+            # 将停止请求放入 update_queue，模拟器线程会检测并断开连接
+            self.update_queue['stop_mqtt'] = True
+            self.update_queue['connect_status'] = False
+            print("已请求停止MQTT连接")
+        except Exception as e:
+            print(f"设置停止标志失败: {e}")
 
     def start_send(self):
         """开始发送功能"""
