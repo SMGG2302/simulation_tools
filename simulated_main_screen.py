@@ -131,7 +131,7 @@ def run_simulator(stop_flag, config_manager):
                     
                     # 检测是否收到发送停止请求
                     if simulator_main_screen.update_queue.get('stop_send') and simulator_main_screen.update_queue.get('send_status'):
-                        print("收到停止发送请求，正在停止发送...")
+                        print("收到停止发送请求")
                         simulator_main_screen.stop_send_signal()
                         simulator_main_screen.update_queue['send_status'] = False
                         simulator_main_screen.update_queue['stop_send'] = False
@@ -139,7 +139,7 @@ def run_simulator(stop_flag, config_manager):
 
                     # 检查是否收到停止接收请求
                     if simulator_main_screen.update_queue.get('stop_subscribe') and simulator_main_screen.update_queue.get('subscribe_status'):
-                        print("收到停止接收请求，正在停止接收...")
+                        print("收到停止接收请求")
                         simulator_main_screen.stop_rec_signal()
                         simulator_main_screen.update_queue['subscribe_status'] = False
                         simulator_main_screen.update_queue['stop_subscribe'] = False

@@ -17,12 +17,13 @@ class  MainScreenSimulator:
         self.is_connected=False   #连接状态
         self.heartbeat_value=0   #记录心跳值
         self.running = False   #运行标志
+        self.rec_running = False  #接收运行标志
         self.control_signals={} #要发送的信号         
 
         #创建心跳线程和控制线程
         self.heartbeat_thread=None
         self.control_thread=None 
-        
+        self.status_thread=None  #状态线程
 
 
     '''初始化结束，下面是MQTT客户端的功能模块'''    
