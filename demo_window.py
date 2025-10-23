@@ -185,6 +185,10 @@ class ControlPanel:
         self.heartbeat_value = 0  # 初始心跳值
         self.heartbeat_thread.start()
 
+        # 重定向标准输出到文本框
+        self.text_redirector = TextRedirector(self.log_text, self.root)
+        sys.stdout = self.text_redirector
+
         # 绑定窗口关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -303,9 +307,9 @@ class ControlPanel:
             print("已经请求启动MQTT连接，请勿重复请求")
         else:
             try:
-                # 重定向标准输出到文本框
-                self.text_redirector = TextRedirector(self.log_text, self.root)
-                sys.stdout = self.text_redirector
+                # # 重定向标准输出到文本框
+                # self.text_redirector = TextRedirector(self.log_text, self.root)
+                # sys.stdout = self.text_redirector
 
                 # 清除可能遗留的停止标志，防止问题
                 if '_stop_mqtt' in self.update_queue:
@@ -463,6 +467,16 @@ class ControlPanel:
         """
         创建订阅管理窗口
         """
+        # 启动窗口前检查mqtt连接状态，如果是未连接状态，则提示连接
+        if self.update_queue.get('connect_status') == False:
+            print("MQTT 未连接，请先连接。")
+            return
+        
+        # 启动窗口前检查发送状态，如果是发送状态，则提示停止发送
+        if self.update_queue.get('start_send') == True or self.update_queue.get('send_status') == True:
+            print("正在发送信号，请先停止发送。")
+            return
+        
         # 如果弹窗已存在且还有效，则提升并返回
         if hasattr(self, '_subscriber_top') and self._subscriber_top and self._subscriber_top.winfo_exists():
             try:
