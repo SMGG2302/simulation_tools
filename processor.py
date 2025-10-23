@@ -337,6 +337,9 @@ class  MainScreenSimulator:
         """停止接收状态信号"""
         print("正在停止接收信号...")
         self.rec_running=False
+        # 停止接收状态信号
+        self.client.unsubscribe(self.internal_status_topic) 
+        self.client.unsubscribe(self.external_status_topic)
         
         # 等待线程结束，但设置超时时间
         if self.status_thread and self.status_thread.is_alive():
