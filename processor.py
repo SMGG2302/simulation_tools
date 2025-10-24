@@ -210,7 +210,7 @@ class  MainScreenSimulator:
     # 状态信号接收功能函数
     def status_task(self):
         """状态信号接收线程"""
-        self.old_rec_queue = {}
+        self.rec_queue = {}
         while self.rec_running and not self.shutdown_event.is_set():
             try:
                 if self.update_queue.get('connect_status'):
@@ -230,16 +230,16 @@ class  MainScreenSimulator:
             return False
         
         # 获取更新队列
-        self.rec_queue = {}
+        old_rec_queue = self.rec_queue.copy()
 
         for topic, payload in self.update_queue.items():
-            if topic.startswith("rec_:"):
-                self.rec_queue[topic[5:]] = payload  # 去掉 "rec:" 前缀
+            if topic.startswith("rec_"):
+                self.rec_queue[topic[4:]] = payload  # 去掉 "rec_" 前缀
         
-        if self.old_rec_queue is not None:
-            for topic, payload in self.old_rec_queue.items():
+        if old_rec_queue is not None:
+            for topic, payload in old_rec_queue.items():
                 if self.rec_queue[topic] != payload :  # 如果更新了状态信号
-                    if payload == True:     # 如果状态信号已启用,订阅对应主题
+                    if payload == False:     # 如果状态信号已启用（对应旧队列为false）,订阅对应主题
                         if topic == 'internal':
                             if self.internal_status_topic:
                                 print(f"正在订阅内部状态主题: {self.internal_status_topic}")
@@ -307,7 +307,6 @@ class  MainScreenSimulator:
         else:
             pass # 跳过第一次当旧队列还未赋值
 
-        self.old_rec_queue = self.rec_queue.copy()
 
     def on_message(self, client, userdata, msg):
         """MQTT 消息到达回调：打印主题和负载，尝试 JSON 解析，并将结果放入 update_queue 供外层使用。"""

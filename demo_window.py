@@ -590,16 +590,19 @@ class ControlPanel:
 
             default_bg = frame.cget('bg')
             def toggle(bvar=bool_var, btn=None):
-                if self.flag == False or bvar.get():
-                    bvar.set(not bvar.get())
-                    if bvar.get():
-                        btn.config(relief='sunken', bg='lightgrey')
-                        self.flag = True
+                if self.update_queue.get('subscribe_status'):
+                    if self.flag == False or bvar.get():
+                        bvar.set(not bvar.get())
+                        if bvar.get():
+                            btn.config(relief='sunken', bg='lightgrey')
+                            self.flag = True
+                        else:
+                            btn.config(relief='raised', bg=default_bg)
+                            self.flag = False
                     else:
-                        btn.config(relief='raised', bg=default_bg)
-                        self.flag = False
+                        print("只能一次订阅一个主题")
                 else:
-                    print("只能一次订阅一个主题")
+                    print("请先开始订阅")
 
             btn = tk.Button(frame, text=label, relief='raised')
             btn.config(command=lambda b=btn: toggle(btn=b))
@@ -869,7 +872,7 @@ class ControlPanel:
                     bool_status.append(f"aux{i-15} {'1' if bool_var.get() else '0'}")
                     self.update_queue[f"aux{i-15}"] = '1' if bool_var.get() else '0'
             for s, bool_var in self.rec_bool_buttons.items():
-                self.update_queue[s] = 'True' if bool_var.get() else 'False'
+                self.update_queue[s] = True if bool_var.get() else False
 
             time.sleep(0.1)  # 每秒输出一次布尔值状态
 
