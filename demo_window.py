@@ -158,6 +158,7 @@ class ControlPanel:
         self.update_queue['connect_status'] = False
         self.update_queue['send_status'] = False
         self.update_queue['subscribe_status'] = False
+        self.flag = False # 用于判断是否有按键按下的标志位
 
         # 创建顶部功能按钮
         self.create_top_area()
@@ -589,16 +590,21 @@ class ControlPanel:
 
             default_bg = frame.cget('bg')
             def toggle(bvar=bool_var, btn=None):
-                bvar.set(not bvar.get())
-                if bvar.get():
-                    btn.config(relief='sunken', bg='lightgrey')
+                if self.flag == False or bvar.get():
+                    bvar.set(not bvar.get())
+                    if bvar.get():
+                        btn.config(relief='sunken', bg='lightgrey')
+                        self.flag = True
+                    else:
+                        btn.config(relief='raised', bg=default_bg)
+                        self.flag = False
                 else:
-                    btn.config(relief='raised', bg=default_bg)
+                    print("只能一次订阅一个主题")
 
             btn = tk.Button(frame, text=label, relief='raised')
             btn.config(command=lambda b=btn: toggle(btn=b))
             btn.pack(side=tk.TOP, anchor='center', padx=5)
-            self.rec_bool_buttons[label] = bool_var
+            self.rec_bool_buttons['rec_'+label] = bool_var
 
         # 创建状态订阅功能按钮
         create_rec_bool_button("internal", status_frame)
@@ -632,6 +638,8 @@ class ControlPanel:
 
         # 关闭回调：仅在当前 stdout 仍为弹窗 redirector 时恢复之前的 stdout
         def _on_subscriber_close():
+            # 清除标志位
+            self.flag = False
             # 停止订阅
             try:
                 self.stop_subscribe()
@@ -860,7 +868,9 @@ class ControlPanel:
                 else:
                     bool_status.append(f"aux{i-15} {'1' if bool_var.get() else '0'}")
                     self.update_queue[f"aux{i-15}"] = '1' if bool_var.get() else '0'
-            
+            for s, bool_var in self.rec_bool_buttons.items():
+                self.update_queue[s] = 'True' if bool_var.get() else 'False'
+
             time.sleep(0.1)  # 每秒输出一次布尔值状态
 
     def generate_heartbeat(self):
