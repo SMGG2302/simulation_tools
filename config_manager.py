@@ -149,7 +149,7 @@ class ConfigManager:
         if '{excavator_id}' in text:
             device_serial = str(int(raw_device_serial))        # 正常 device_serial
         else:
-            device_serial = str(int(raw_device_serial) + 2)    # device_serial + 2
+            device_serial = str(int(raw_device_serial))    # device_serial + 2
 
         # 替换 {device_serial}
         text = text.replace('{device_serial}', device_serial)

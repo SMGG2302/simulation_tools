@@ -17,12 +17,13 @@ class  MainScreenSimulator:
         self.is_connected=False   #连接状态
         self.heartbeat_value=0   #记录心跳值
         self.running = False   #运行标志
+        self.rec_running = False  #接收运行标志
         self.control_signals={} #要发送的信号         
 
         #创建心跳线程和控制线程
         self.heartbeat_thread=None
         self.control_thread=None 
-        
+        self.status_thread=None  #状态线程
 
 
     '''初始化结束，下面是MQTT客户端的功能模块'''    
@@ -38,12 +39,17 @@ class  MainScreenSimulator:
             client_id_prefix = current_mqtt_config.get('client_id_prefix', 'excavator_ctrl_')
             self.safe_topic = current_mqtt_config['safe_topic']
             self.control_topic_base = current_mqtt_config['control_topic_base']
+            self.status_topics = current_mqtt_config['status_topics']
+            self.internal_status_topic = self.status_topics.get('internal_status')
+            self.external_status_topic = self.status_topics.get('external_equipment_status')
+
 
             random_suffix = ''.join(random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=8))
             self.client_id = client_id_prefix + random_suffix
 
             self.client=mqtt.Client(client_id=self.client_id, clean_session=True)
             self.client.on_connect=self.on_connect                        #设置连接MQTT服务器的回调函数
+            self.client.on_message=self.on_message                        #设置接收消息的回调函数
             self.client.on_disconnect=self.on_disconnect                  #设置断开MQTT服务器的回调函数
             if username and password:
                 self.client.username_pw_set(username, password)   #添加用户名和密码
@@ -97,7 +103,18 @@ class  MainScreenSimulator:
 
         print("已启动发送控制信号和心跳")
         return True
-   
+    
+    def start_rec_signal(self):
+        """启动接收控制信号"""
+        self.rec_running=True
+        #启动状态信号接收线程
+        self.status_thread=threading.Thread(target=self.status_task,name="status_thread")
+        self.status_thread.daemon = True
+        self.status_thread.start()
+
+        print("已启动接收状态信号")
+        return True
+    
     def time_for_send_signal(self):
         get_mqtt_protocol_timeouts=self.config_manager.get_mqtt_protocol_timeouts()
         send_times = get_mqtt_protocol_timeouts.get('heartbeat_detection_interval_sec', 1)
@@ -151,28 +168,6 @@ class  MainScreenSimulator:
         """控制线程"""
         send_count=0
         while self.running and not self.shutdown_event.is_set():
-            # 在发送控制信号前，检查外部指令（比如 GUI 写入的停止请求）
-            try:
-                if self.update_queue and '_stop_mqtt' in self.update_queue:
-                    # 收到停止 MQTT 的请求，进行安全清理
-                    print("收到停止 MQTT 请求，正在停止发送并断开连接...")
-                    # 清理运行标志，停止心跳和控制线程
-                    self.running = False
-                    # 主动断开连接并停止 loop
-                    try:
-                        self.disconnect()
-                    except Exception as e:
-                        print(f"断开 MQTT 时出错: {e}")
-                    # 移除停止标志以避免重复处理
-                    try:
-                        del self.update_queue['_stop_mqtt']
-                    except:
-                        pass
-                    break
-
-            except Exception as e:
-                print(f"检查停止请求时出错: {e}")
-
             if self.is_connected:  
                 self.send_control_signals()
                 send_count+=1
@@ -197,21 +192,153 @@ class  MainScreenSimulator:
             success_count=0
             if self.update_queue:
                 for signal_name, signal_value in self.update_queue.items():
-                    # 检查是否需要退出
-                    if self.shutdown_event.is_set():
-                        break
-                    topic=f"{self.control_topic_base}{signal_name}"
-                    payload=str(signal_value)                                  #话题实际内容
-                    result,_=self.client.publish(topic, payload, qos=0, retain=False)
-                    if result==mqtt.MQTT_ERR_SUCCESS:
-                        print(f"已发送控制信号: {topic} - {payload}")
-                        success_count+=1
-                    else:
-                        print(f"发送控制信号失败")
+                    if not signal_name.startswith("rec_"):
+                        # 检查是否需要退出
+                        if self.shutdown_event.is_set():
+                            break
+                        topic=f"{self.control_topic_base}{signal_name}"
+                        payload=str(signal_value)                                  #话题实际内容
+                        result,_=self.client.publish(topic, payload, qos=0, retain=False)
+                        if result==mqtt.MQTT_ERR_SUCCESS:
+                            print(f"已发送控制信号: {topic} - {payload}")
+                            success_count+=1
+                        else:
+                            print(f"发送控制信号失败")
         except Exception as e:
             print(f"发送控制信号时发生错误: {e}")
             return False
+        
+    # 状态信号接收功能函数
+    def status_task(self):
+        """状态信号接收线程"""
+        self.rec_queue = {}
+        while self.rec_running and not self.shutdown_event.is_set():
+            try:
+                if self.update_queue.get('connect_status'):
+                    self.rec_status_signals()
+                else:
+                    print("未连接到MQTT服务器，请检查网络连接")
+            except Exception as e:
+                print(f"状态信号接收线程发生错误: {e}")
+            time.sleep(0.1)
+        else:
+            print("状态信号接收线程未运行或已收到关闭信号")
 
+    def rec_status_signals(self):
+        """接收状态信号"""
+        if not self.is_connected or not self.status_topics:
+            print("无法接收状态信号,因为MQTT客户端未连接到服务器或者没有状态主题")
+            return False
+        
+        # 获取更新队列
+        old_rec_queue = self.rec_queue.copy()
+
+        for topic, payload in self.update_queue.items():
+            if topic.startswith("rec_"):
+                self.rec_queue[topic[4:]] = payload  # 去掉 "rec_" 前缀
+        
+        if old_rec_queue is not None:
+            for topic, payload in old_rec_queue.items():
+                if self.rec_queue[topic] != payload :  # 如果更新了状态信号
+                    if payload == False:     # 如果状态信号已启用（对应旧队列为false）,订阅对应主题
+                        if topic == 'internal':
+                            if self.internal_status_topic:
+                                print(f"正在订阅内部状态主题: {self.internal_status_topic}")
+                                result, _ = self.client.subscribe(self.internal_status_topic)
+                                if result == mqtt.MQTT_ERR_SUCCESS:
+                                    print(f"已订阅内部状态主题: {self.internal_status_topic}")
+
+                                else:
+                                    print(f"订阅内部状态主题失败: {result}")
+                            else:
+                                print("未配置内部状态主题，跳过订阅")
+                        elif topic == 'external':
+                            if self.external_status_topic:
+                                print(f"正在订阅外部设备状态主题: {self.external_status_topic}")
+                                result, _ = self.client.subscribe(self.external_status_topic)
+                                if result == mqtt.MQTT_ERR_SUCCESS:
+                                    print(f"已订阅外部设备状态主题: {self.external_status_topic}")
+                                else:
+                                    print(f"订阅外部设备状态主题失败: {result}")
+                            else:
+                                print("未配置外部设备状态主题，跳过订阅")
+                        else:
+                            if self.control_topic_base:
+                                print(f"正在订阅控制信号主题: {self.control_topic_base}{topic}")
+                                result, _ = self.client.subscribe(f"{self.control_topic_base}{topic}")
+                                if result == mqtt.MQTT_ERR_SUCCESS:
+                                    print(f"已订阅控制信号主题: {self.control_topic_base}{topic}")
+                                else:
+                                    print(f"订阅控制信号主题失败: {result}")
+                            else:
+                                print("未配置控制信号主题，跳过订阅")
+                    else: # 如果状态信号已禁用,取消订阅对应主题
+                        if topic == 'internal':
+                            if self.internal_status_topic:
+                                print(f"正在取消订阅内部状态主题: {self.internal_status_topic}")
+                                result, _ = self.client.unsubscribe(self.internal_status_topic)
+                                if result == mqtt.MQTT_ERR_SUCCESS:
+                                    print(f"已取消订阅内部状态主题: {self.internal_status_topic}")
+                                else:
+                                    print(f"取消订阅内部状态主题失败: {result}")
+                            else:
+                                print("未配置内部状态主题，跳过取消订阅")
+                        elif topic == 'external':
+                            if self.external_status_topic:
+                                print(f"正在取消订阅外部设备状态主题: {self.external_status_topic}")
+                                result, _ = self.client.unsubscribe(self.external_status_topic)
+                                if result == mqtt.MQTT_ERR_SUCCESS:
+                                    print(f"已取消订阅外部设备状态主题: {self.external_status_topic}")
+                                else:
+                                    print(f"取消订阅外部设备状态主题失败: {result}")
+                            else:
+                                print("未配置外部设备状态主题，跳过取消订阅")
+                        else:
+                            if self.control_topic_base:
+                                print(f"正在取消订阅控制信号主题: {self.control_topic_base}{topic}")
+                                result, _ = self.client.unsubscribe(f"{self.control_topic_base}{topic}")
+                                if result == mqtt.MQTT_ERR_SUCCESS:
+                                    print(f"已取消订阅控制信号主题: {self.control_topic_base}{topic}")
+                                else:
+                                    print(f"取消订阅控制信号主题失败: {result}")
+                            else:
+                                print("未配置控制信号主题，跳过取消订阅")
+                else:
+                    pass # 队列值未改变，跳过
+        else:
+            pass # 跳过第一次当旧队列还未赋值
+
+
+    def on_message(self, client, userdata, msg):
+        """MQTT 消息到达回调：打印主题和负载，尝试 JSON 解析，并将结果放入 update_queue 供外层使用。"""
+        try:
+            topic = msg.topic
+            payload_bytes = msg.payload
+            try:
+                payload = payload_bytes.decode('utf-8')
+            except Exception:
+                # 非 utf-8：以 repr 形式保存
+                payload = repr(payload_bytes)
+
+            # 打印原始接收内容
+            print(f"接收消息: {topic} -> {payload}")
+
+            # # 尝试解析 JSON
+            # parsed = None
+            # try:
+            #     parsed = json.loads(payload)
+            # except Exception:
+            #     parsed = None
+
+            # # 将接收到的数据记录到 update_queue，键名使用 recv:<topic>
+            # try:
+            #     key = f"recv:{topic}"
+            #     # 如果解析成功，则放入解析后的结构，否则放原始字符串
+            #     self.update_queue[key] = parsed if parsed is not None else payload
+            # except Exception:
+            #     pass
+        except Exception as e:
+            print(f"处理接收消息时发生错误: {e}")
 
     '''手动断连功能函数'''
     def disconnect(self):
@@ -232,3 +359,19 @@ class  MainScreenSimulator:
             self.control_thread.join(timeout=1)
             
         print("已停止发送信号和心跳")
+
+    def stop_rec_signal(self):
+        """停止接收状态信号"""
+        print("正在停止接收信号...")
+        self.rec_running=False
+        # 取消订阅状态主题
+        self.client.unsubscribe(self.internal_status_topic) 
+        self.client.unsubscribe(self.external_status_topic)
+        for topic, v in self.rec_queue.items():
+            self.client.unsubscribe(f"{self.control_topic_base}{topic}")
+        
+        # 等待线程结束，但设置超时时间
+        if self.status_thread and self.status_thread.is_alive():
+            self.status_thread.join(timeout=1)
+            
+        print("已停止接收状态信号")

@@ -1,4 +1,4 @@
-('D:\\VS_project\\Python_project\\simulation_tools\\build\\simulated_main_screen\\PYZ-00.pyz',
+('D:\\VS_project\\Python_project\\simulation_tools\\build\\SimulationTool\\PYZ-00.pyz',
  [('__future__', 'D:\\VS_environment\\Python\\Lib\\__future__.py', 'PYMODULE'),
   ('_colorize', 'D:\\VS_environment\\Python\\Lib\\_colorize.py', 'PYMODULE'),
   ('_compat_pickle',

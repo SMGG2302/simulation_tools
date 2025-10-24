@@ -1,8 +1,8 @@
 {
   "simulation_mode": false,
   "mqtt": {
-    "broker": "broker.emqx.io",
-    "simulation_broker": "broker.emqx.io",
+    "broker": "127.0.0.1",
+    "simulation_broker": "127.0.0.1",
     "port": 1883,
     "keepalive": 3,
     "username": "device{device_serial}_client",
@@ -21,7 +21,7 @@
       "internal_status": "up/status/{excavator_id}"
     },
     "device_config": {
-      "device_type": "推土机",
+      "device_type": "钻机",
       "device_serial": "1",
       "excavator_id": "LSVHJ13302222176{device_serial}"
     }
