@@ -192,17 +192,18 @@ class  MainScreenSimulator:
             success_count=0
             if self.update_queue:
                 for signal_name, signal_value in self.update_queue.items():
-                    # 检查是否需要退出
-                    if self.shutdown_event.is_set():
-                        break
-                    topic=f"{self.control_topic_base}{signal_name}"
-                    payload=str(signal_value)                                  #话题实际内容
-                    result,_=self.client.publish(topic, payload, qos=0, retain=False)
-                    if result==mqtt.MQTT_ERR_SUCCESS:
-                        print(f"已发送控制信号: {topic} - {payload}")
-                        success_count+=1
-                    else:
-                        print(f"发送控制信号失败")
+                    if not signal_name.startswith("rec_"):
+                        # 检查是否需要退出
+                        if self.shutdown_event.is_set():
+                            break
+                        topic=f"{self.control_topic_base}{signal_name}"
+                        payload=str(signal_value)                                  #话题实际内容
+                        result,_=self.client.publish(topic, payload, qos=0, retain=False)
+                        if result==mqtt.MQTT_ERR_SUCCESS:
+                            print(f"已发送控制信号: {topic} - {payload}")
+                            success_count+=1
+                        else:
+                            print(f"发送控制信号失败")
         except Exception as e:
             print(f"发送控制信号时发生错误: {e}")
             return False
