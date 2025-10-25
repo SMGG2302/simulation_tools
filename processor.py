@@ -367,8 +367,9 @@ class  MainScreenSimulator:
         # 取消订阅状态主题
         self.client.unsubscribe(self.internal_status_topic) 
         self.client.unsubscribe(self.external_status_topic)
-        for topic, v in self.rec_queue.items():
-            self.client.unsubscribe(f"{self.control_topic_base}{topic}")
+        # 无需停止连接时取消订阅，订阅窗口关闭必然无订阅
+        # for topic, v in self.rec_queue.items():
+        #     self.client.unsubscribe(f"{self.control_topic_base}{topic}")
         
         # 等待线程结束，但设置超时时间
         if self.status_thread and self.status_thread.is_alive():
