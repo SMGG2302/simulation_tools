@@ -21,12 +21,8 @@
       "internal_status": "up/status/{excavator_id}"
     },
     "device_config": {
-<<<<<<< HEAD
-      "device_type": "平地机",
-=======
       "device_type": "钻机",
->>>>>>> dev
-      "device_serial": "2",
+      "device_serial": "1",
       "excavator_id": "LSVHJ13302222176{device_serial}"
     }
   },
