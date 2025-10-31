@@ -232,14 +232,14 @@ class ControlPanel:
                 # 忽略无法设置的子控件
                 pass
     
-    def create_canvas_scrollbar(self, frame):
+    def create_canvas_scrollbar(self, frame, width=250):
         """创建画布和滚动条"""
         # 创建带滚动条的动作区域容器
         container = tk.Frame(frame)
         container.pack(fill=tk.BOTH, expand=True)
         
         # 创建画布和滚动条
-        canvas = tk.Canvas(container, highlightthickness=0, width=250)
+        canvas = tk.Canvas(container, highlightthickness=0, width=width)
         scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview, width=16)
         # 设置滚动条颜色使其更加明显
         scrollbar.configure(
@@ -282,70 +282,18 @@ class ControlPanel:
     def creat_action_area(self):
         """创建动作区域"""
         # 创建带滚动条的动作区域容器
-        action_container = tk.Frame(self.action_frame)
-        action_container.pack(fill=tk.BOTH, expand=True)
-        
-        # 创建画布和滚动条
-        self.action_canvas = tk.Canvas(action_container, highlightthickness=0, width=250)
-        action_scrollbar = tk.Scrollbar(action_container, orient="vertical", command=self.action_canvas.yview, width=16)
-        # 设置滚动条颜色使其更加明显
-        action_scrollbar.configure(
-            bg="#808080",          # 滚动条本身的颜色
-            troughcolor="#c0c0c0", # 滚动条槽的颜色
-            activebackground="#606060"  # 滚动条激活时的颜色
-        )
-        self.action_scrollable_frame = tk.Frame(self.action_canvas)
-
-        # 配置画布和滚动区域
-        self.action_scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.on_frame_configure(self.action_canvas)
-        )
-
-        self.action_canvas.create_window((0, 0), window=self.action_scrollable_frame, anchor="nw")
-        self.action_canvas.configure(yscrollcommand=action_scrollbar.set)
-
-        # 打包画布和滚动条
-        self.action_canvas.pack(side="left", fill="both", expand=True)
-        action_scrollbar.pack(side="right", fill="y")
-
+        action_scrollable_frame = self.create_canvas_scrollbar(self.action_frame, width=250)
         # 创建左侧滑动条和开关
         for i in range(20):  # 创建 20 对滑动条和布尔开关
-            self.create_slider(f"Action{i+1}", self.action_scrollable_frame)
+            self.create_slider(f"Action{i+1}", action_scrollable_frame)
             
     def creat_power_area(self):
         """创建动力区域"""
-        # 创建带滚动条的动作区域容器
-        power_container = tk.Frame(self.power_frame)
-        power_container.pack(fill=tk.BOTH, expand=True)
-        
-        # 创建画布和滚动条
-        self.power_canvas = tk.Canvas(power_container, highlightthickness=0, width=100)
-        power_scrollbar = tk.Scrollbar(power_container, orient="vertical", command=self.power_canvas.yview, width=16)
-        # 设置滚动条颜色使其更加明显
-        power_scrollbar.configure(
-            bg="#808080",          # 滚动条本身的颜色
-            troughcolor="#c0c0c0", # 滚动条槽的颜色
-            activebackground="#606060"  # 滚动条激活时的颜色
-        )
-        self.power_scrollable_frame = tk.Frame(self.power_canvas)
-
-        # 配置画布和滚动区域
-        self.power_scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.on_frame_configure(self.power_canvas)
-        )
-
-        self.power_canvas.create_window((0, 0), window=self.power_scrollable_frame, anchor="nw")
-        self.power_canvas.configure(yscrollcommand=power_scrollbar.set)
-
-        # 打包画布和滚动条
-        self.power_canvas.pack(side="left", fill="both", expand=True)
-        power_scrollbar.pack(side="right", fill="y")
-
+        # 创建动力区域容器
+        power_scrollable_frame = self.create_canvas_scrollbar(self.power_frame, width=100)
         # 创建中间布尔值按钮
         for i in range(40):
-            self.create_bool_button(f"power{i+1}", self.power_scrollable_frame)
+            self.create_bool_button(f"power{i+1}", power_scrollable_frame)
 
     def creat_aux_area(self):
         """创建辅助区域"""
@@ -692,12 +640,15 @@ class ControlPanel:
         create_rec_bool_button("internal", status_frame)
         create_rec_bool_button("external", status_frame)
 
-
+        # 创建画布和滑动条
+        ctrl_action_rolling_frame = self.create_canvas_scrollbar(ctrl_action_frame, width=100)
+        ctrl_power_rolling_frame = self.create_canvas_scrollbar(ctrl_power_frame, width=100)
+        
         # 创建控制订阅功能按钮
-        for i in range(1, 9):
-            create_rec_bool_button(f"action{i}", ctrl_action_frame)
-        for i in range(1, 18):
-            create_rec_bool_button(f"power{i}", ctrl_power_frame)
+        for i in range(1, 20):
+            create_rec_bool_button(f"action{i}", ctrl_action_rolling_frame)
+        for i in range(1, 40):
+            create_rec_bool_button(f"power{i}", ctrl_power_rolling_frame)
         for i in range(1, 11):
             create_rec_bool_button(f"aux{i}", ctrl_aux_frame)
 
