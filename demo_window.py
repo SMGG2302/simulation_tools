@@ -232,6 +232,43 @@ class ControlPanel:
                 # 忽略无法设置的子控件
                 pass
     
+    def create_canvas_scrollbar(self, frame):
+        """创建画布和滚动条"""
+        # 创建带滚动条的动作区域容器
+        container = tk.Frame(frame)
+        container.pack(fill=tk.BOTH, expand=True)
+        
+        # 创建画布和滚动条
+        canvas = tk.Canvas(container, highlightthickness=0, width=250)
+        scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview, width=16)
+        # 设置滚动条颜色使其更加明显
+        scrollbar.configure(
+            bg="#808080",          # 滚动条本身的颜色
+            troughcolor="#c0c0c0", # 滚动条槽的颜色
+            activebackground="#606060"  # 滚动条激活时的颜色
+        )
+        scrollable_frame = tk.Frame(canvas)
+
+        # 配置画布和滚动区域
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e:self.on_frame_configure(canvas)
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # 打包画布和滚动条
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        return scrollable_frame
+
+    def on_frame_configure(self, canvas):
+        """当滚动框架大小改变时更新画布的滚动区域"""
+        # 强制设置一个足够大的滚动区域，确保滚动条始终可用
+        canvas.configure(scrollregion=(0, 0, 300, 2000))
+        
     def create_top_area(self):
         """创建顶部按钮"""
         # 添加功能按钮
@@ -241,7 +278,7 @@ class ControlPanel:
         self.create_top_button("停止发送", self.stop_send)
         self.create_top_button("设置参数", self.set_parameters)
         self.create_top_button("订阅弹窗", self.show_subscriber_window)
-
+            
     def creat_action_area(self):
         """创建动作区域"""
         # 创建带滚动条的动作区域容器
@@ -262,7 +299,7 @@ class ControlPanel:
         # 配置画布和滚动区域
         self.action_scrollable_frame.bind(
             "<Configure>",
-            self.on_frame_configure(self.action_canvas)
+            lambda e: self.on_frame_configure(self.action_canvas)
         )
 
         self.action_canvas.create_window((0, 0), window=self.action_scrollable_frame, anchor="nw")
@@ -275,11 +312,6 @@ class ControlPanel:
         # 创建左侧滑动条和开关
         for i in range(20):  # 创建 20 对滑动条和布尔开关
             self.create_slider(f"Action{i+1}", self.action_scrollable_frame)
-            
-    def on_frame_configure(self, canvas):
-        """当滚动框架大小改变时更新画布的滚动区域"""
-        # 强制设置一个足够大的滚动区域，确保滚动条始终可用
-        canvas.configure(scrollregion=(0, 0, 300, 2000))
             
     def creat_power_area(self):
         """创建动力区域"""
@@ -301,7 +333,7 @@ class ControlPanel:
         # 配置画布和滚动区域
         self.power_scrollable_frame.bind(
             "<Configure>",
-            self.on_frame_configure(self.power_canvas)
+            lambda e: self.on_frame_configure(self.power_canvas)
         )
 
         self.power_canvas.create_window((0, 0), window=self.power_scrollable_frame, anchor="nw")
@@ -314,17 +346,6 @@ class ControlPanel:
         # 创建中间布尔值按钮
         for i in range(40):
             self.create_bool_button(f"power{i+1}", self.power_scrollable_frame)
-        # # 创建换挡的滑动条（模拟换挡杆）
-        # self.gear_slider = tk.Scale(self.power_frame, from_=1, to=6, orient="horizontal", length=200, sliderlength=20)
-        # self.gear_slider.set(1)  # 默认设置为 1 档
-        # self.gear_slider.pack(pady=5)
-
-        # # 添加标签，显示当前档位
-        # self.gear_label = tk.Label(self.power_frame, text="Power17")
-        # self.gear_label.pack(pady=5)
-
-        # # 设置滑动条事件监听，更新标签显示当前档位
-        # self.gear_slider.bind("<Motion>", self.update_gear)
 
     def creat_aux_area(self):
         """创建辅助区域"""
@@ -670,6 +691,7 @@ class ControlPanel:
         # 创建状态订阅功能按钮
         create_rec_bool_button("internal", status_frame)
         create_rec_bool_button("external", status_frame)
+
 
         # 创建控制订阅功能按钮
         for i in range(1, 9):
