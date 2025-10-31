@@ -262,7 +262,7 @@ class ControlPanel:
         # 配置画布和滚动区域
         self.action_scrollable_frame.bind(
             "<Configure>",
-            self.on_frame_configure
+            self.on_frame_configure(self.action_canvas)
         )
 
         self.action_canvas.create_window((0, 0), window=self.action_scrollable_frame, anchor="nw")
@@ -276,27 +276,55 @@ class ControlPanel:
         for i in range(20):  # 创建 20 对滑动条和布尔开关
             self.create_slider(f"Action{i+1}", self.action_scrollable_frame)
             
-    def on_frame_configure(self, event=None):
+    def on_frame_configure(self, canvas):
         """当滚动框架大小改变时更新画布的滚动区域"""
         # 强制设置一个足够大的滚动区域，确保滚动条始终可用
-        self.action_canvas.configure(scrollregion=(0, 0, 300, 2000))
+        canvas.configure(scrollregion=(0, 0, 300, 2000))
             
     def creat_power_area(self):
         """创建动力区域"""
+        # 创建带滚动条的动作区域容器
+        power_container = tk.Frame(self.power_frame)
+        power_container.pack(fill=tk.BOTH, expand=True)
+        
+        # 创建画布和滚动条
+        self.power_canvas = tk.Canvas(power_container, highlightthickness=0, width=100)
+        power_scrollbar = tk.Scrollbar(power_container, orient="vertical", command=self.power_canvas.yview, width=16)
+        # 设置滚动条颜色使其更加明显
+        power_scrollbar.configure(
+            bg="#808080",          # 滚动条本身的颜色
+            troughcolor="#c0c0c0", # 滚动条槽的颜色
+            activebackground="#606060"  # 滚动条激活时的颜色
+        )
+        self.power_scrollable_frame = tk.Frame(self.power_canvas)
+
+        # 配置画布和滚动区域
+        self.power_scrollable_frame.bind(
+            "<Configure>",
+            self.on_frame_configure(self.power_canvas)
+        )
+
+        self.power_canvas.create_window((0, 0), window=self.power_scrollable_frame, anchor="nw")
+        self.power_canvas.configure(yscrollcommand=power_scrollbar.set)
+
+        # 打包画布和滚动条
+        self.power_canvas.pack(side="left", fill="both", expand=True)
+        power_scrollbar.pack(side="right", fill="y")
+
         # 创建中间布尔值按钮
         for i in range(40):
-            self.create_bool_button(f"power{i+1}", self.power_frame)
-        # 创建换挡的滑动条（模拟换挡杆）
-        self.gear_slider = tk.Scale(self.power_frame, from_=1, to=6, orient="horizontal", length=200, sliderlength=20)
-        self.gear_slider.set(1)  # 默认设置为 1 档
-        self.gear_slider.pack(pady=5)
+            self.create_bool_button(f"power{i+1}", self.power_scrollable_frame)
+        # # 创建换挡的滑动条（模拟换挡杆）
+        # self.gear_slider = tk.Scale(self.power_frame, from_=1, to=6, orient="horizontal", length=200, sliderlength=20)
+        # self.gear_slider.set(1)  # 默认设置为 1 档
+        # self.gear_slider.pack(pady=5)
 
-        # 添加标签，显示当前档位
-        self.gear_label = tk.Label(self.power_frame, text="Power17")
-        self.gear_label.pack(pady=5)
+        # # 添加标签，显示当前档位
+        # self.gear_label = tk.Label(self.power_frame, text="Power17")
+        # self.gear_label.pack(pady=5)
 
-        # 设置滑动条事件监听，更新标签显示当前档位
-        self.gear_slider.bind("<Motion>", self.update_gear)
+        # # 设置滑动条事件监听，更新标签显示当前档位
+        # self.gear_slider.bind("<Motion>", self.update_gear)
 
     def creat_aux_area(self):
         """创建辅助区域"""
@@ -870,7 +898,6 @@ class ControlPanel:
         """在子线程中发送控制信号"""
         if bool_var.get():  # 如果布尔值为 True，则发送该数据
             self.update_queue[f"action{i+1}"] = max_val
-
 
     def send_control_signals(self, max_vals):
         """在新的线程中执行控制信号的发送并更新update_queue"""
