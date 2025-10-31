@@ -105,7 +105,7 @@ class ControlPanel:
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # 设置主框架的行列配置
-        self.main_frame.grid_columnconfigure(0, weight=3, minsize=250)  # 左侧区域权重
+        self.main_frame.grid_columnconfigure(0, weight=3, minsize=300)  # 左侧区域权重
         self.main_frame.grid_columnconfigure(1, weight=3, minsize=150)  # 中间区域权重
         self.main_frame.grid_columnconfigure(2, weight=3, minsize=150)  # 右侧日志权重
         self.main_frame.grid_columnconfigure(3, weight=1, minsize=450)
@@ -152,7 +152,7 @@ class ControlPanel:
         self.max_min_switches = []  # 存储布尔开关
         self.update_queue = {}  # 存储数据更新的字典
         self.previous_update_queue = {}  # 上次的更新字典
-        self.bool_buttons = []  # 存储布尔按钮
+        self.ctrl_bool_buttons = {}  # 存储布尔按钮
         self.rec_bool_buttons = {}  # 存储接收信号按钮的字典
         self.update_queue['start_subscribe'] = False  # 初始化订阅状态为 False
         self.update_queue['connect_status'] = False
@@ -232,6 +232,43 @@ class ControlPanel:
                 # 忽略无法设置的子控件
                 pass
     
+    def create_canvas_scrollbar(self, frame, width=250):
+        """创建画布和滚动条"""
+        # 创建带滚动条的动作区域容器
+        container = tk.Frame(frame)
+        container.pack(fill=tk.BOTH, expand=True)
+        
+        # 创建画布和滚动条
+        canvas = tk.Canvas(container, highlightthickness=0, width=width)
+        scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview, width=16)
+        # 设置滚动条颜色使其更加明显
+        scrollbar.configure(
+            bg="#808080",          # 滚动条本身的颜色
+            troughcolor="#c0c0c0", # 滚动条槽的颜色
+            activebackground="#606060"  # 滚动条激活时的颜色
+        )
+        scrollable_frame = tk.Frame(canvas)
+
+        # 配置画布和滚动区域
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e:self.on_frame_configure(canvas)
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # 打包画布和滚动条
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        return scrollable_frame
+
+    def on_frame_configure(self, canvas):
+        """当滚动框架大小改变时更新画布的滚动区域"""
+        # 强制设置一个足够大的滚动区域，确保滚动条始终可用
+        canvas.configure(scrollregion=(0, 0, 300, 2000))
+        
     def create_top_area(self):
         """创建顶部按钮"""
         # 添加功能按钮
@@ -241,32 +278,22 @@ class ControlPanel:
         self.create_top_button("停止发送", self.stop_send)
         self.create_top_button("设置参数", self.set_parameters)
         self.create_top_button("订阅弹窗", self.show_subscriber_window)
-
+            
     def creat_action_area(self):
         """创建动作区域"""
+        # 创建带滚动条的动作区域容器
+        action_scrollable_frame = self.create_canvas_scrollbar(self.action_frame, width=250)
         # 创建左侧滑动条和开关
-        for i in range(8):  # 创建 8 对滑动条和布尔开关
-            self.create_slider(f"Action{i+1}", self.action_frame)
-
-        # 创建更新按钮
-        self.create_update_button(self.action_frame)
-
+        for i in range(20):  # 创建 20 对滑动条和布尔开关
+            self.create_slider(f"Action{i+1}", action_scrollable_frame)
+            
     def creat_power_area(self):
         """创建动力区域"""
+        # 创建动力区域容器
+        power_scrollable_frame = self.create_canvas_scrollbar(self.power_frame, width=100)
         # 创建中间布尔值按钮
-        for i in range(16):
-            self.create_bool_button(f"power{i+1}", self.power_frame)
-        # 创建换挡的滑动条（模拟换挡杆）
-        self.gear_slider = tk.Scale(self.power_frame, from_=1, to=6, orient="horizontal", length=200, sliderlength=20)
-        self.gear_slider.set(1)  # 默认设置为 1 档
-        self.gear_slider.pack(pady=5)
-
-        # 添加标签，显示当前档位
-        self.gear_label = tk.Label(self.power_frame, text="Power17")
-        self.gear_label.pack(pady=5)
-
-        # 设置滑动条事件监听，更新标签显示当前档位
-        self.gear_slider.bind("<Motion>", self.update_gear)
+        for i in range(40):
+            self.create_bool_button(f"power{i+1}", power_scrollable_frame)
 
     def creat_aux_area(self):
         """创建辅助区域"""
@@ -613,11 +640,15 @@ class ControlPanel:
         create_rec_bool_button("internal", status_frame)
         create_rec_bool_button("external", status_frame)
 
+        # 创建画布和滑动条
+        ctrl_action_rolling_frame = self.create_canvas_scrollbar(ctrl_action_frame, width=100)
+        ctrl_power_rolling_frame = self.create_canvas_scrollbar(ctrl_power_frame, width=100)
+        
         # 创建控制订阅功能按钮
-        for i in range(1, 9):
-            create_rec_bool_button(f"action{i}", ctrl_action_frame)
-        for i in range(1, 18):
-            create_rec_bool_button(f"power{i}", ctrl_power_frame)
+        for i in range(1, 20):
+            create_rec_bool_button(f"action{i}", ctrl_action_rolling_frame)
+        for i in range(1, 40):
+            create_rec_bool_button(f"power{i}", ctrl_power_rolling_frame)
         for i in range(1, 11):
             create_rec_bool_button(f"aux{i}", ctrl_aux_frame)
 
@@ -719,7 +750,7 @@ class ControlPanel:
     def create_slider(self, label, parent):
         # 创建滑动条框架
         frame = tk.Frame(parent)
-        frame.pack(fill=tk.X, pady=4)
+        frame.pack(fill=tk.X, pady=2)
 
         # 顶部标题标签，显示例如: Action1：127
         title_label = tk.Label(frame, text=f"{label}：127", anchor='w')
@@ -791,6 +822,7 @@ class ControlPanel:
             bvar.set(not bvar.get())
             if bvar.get():
                 btn.config(relief='sunken', bg='lightgrey')
+                self.update()
             else:
                 btn.config(relief='raised', bg=default_bg)
 
@@ -817,12 +849,7 @@ class ControlPanel:
         btn = tk.Button(frame, text=label, relief='raised')
         btn.config(command=lambda b=btn: toggle(btn=b))
         btn.pack(side=tk.TOP, anchor='center', padx=5)
-        self.bool_buttons.append(bool_var)
-
-    def create_update_button(self, parent):
-        """创建更新按钮"""
-        self.update_button = tk.Button(parent, text="Update", command=self.update)
-        self.update_button.pack(pady=10)
+        self.ctrl_bool_buttons['ctrl_'+label] = bool_var
 
     def update(self):
         """更新按钮点击事件"""
@@ -845,7 +872,6 @@ class ControlPanel:
         if bool_var.get():  # 如果布尔值为 True，则发送该数据
             self.update_queue[f"action{i+1}"] = max_val
 
-
     def send_control_signals(self, max_vals):
         """在新的线程中执行控制信号的发送并更新update_queue"""
         threads = []
@@ -863,14 +889,8 @@ class ControlPanel:
     def output_bool_status(self):
         """每秒输出一次所有布尔值按钮的状态并加上心跳值"""
         while not self.closing:
-            bool_status = []
-            for i, bool_var in enumerate(self.bool_buttons):
-                if i < 16:
-                    bool_status.append(f"power{i+1} {'True' if bool_var.get() else 'False'}")
-                    self.update_queue[f"power{i+1}"] = 'True' if bool_var.get() else 'False'
-                else:
-                    bool_status.append(f"aux{i-15} {'1' if bool_var.get() else '0'}")
-                    self.update_queue[f"aux{i-15}"] = '1' if bool_var.get() else '0'
+            for s, bool_var in self.ctrl_bool_buttons.items():
+                self.update_queue[s] = True if bool_var.get() else False
             for s, bool_var in self.rec_bool_buttons.items():
                 self.update_queue[s] = True if bool_var.get() else False
 
