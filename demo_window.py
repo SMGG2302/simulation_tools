@@ -247,9 +247,40 @@ class ControlPanel:
         # 创建更新按钮
         self.create_update_button(self.action_frame)
 
+        # 创建带滚动条的动作区域容器
+        action_container = tk.Frame(self.action_frame)
+        action_container.pack(fill=tk.BOTH, expand=True)
+        
+        # 创建画布和滚动条
+        self.action_canvas = tk.Canvas(action_container, highlightthickness=0)
+        action_scrollbar = tk.Scrollbar(action_container, orient="vertical", command=self.action_canvas.yview)
+        self.action_scrollable_frame = tk.Frame(self.action_canvas)
+
+        # 配置画布和滚动区域
+        self.action_scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.action_canvas.configure(
+                scrollregion=self.action_canvas.bbox("all")
+            )
+        )
+
+        self.action_canvas.create_window((0, 0), window=self.action_scrollable_frame, anchor="nw")
+        self.action_canvas.configure(yscrollcommand=action_scrollbar.set)
+
+        # 打包画布和滚动条
+        self.action_canvas.pack(side="left", fill="both", expand=True)
+        action_scrollbar.pack(side="right", fill="y")
+
+        # 绑定鼠标滚轮事件
+        def _on_mousewheel(event):
+            self.action_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            
+        self.action_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        self.action_scrollable_frame.bind("<MouseWheel>", _on_mousewheel)
+
         # 创建左侧滑动条和开关
         for i in range(20):  # 创建 8 对滑动条和布尔开关
-            self.create_slider(f"Action{i+1}", self.action_frame)
+            self.create_slider(f"Action{i+1}", self.action_scrollable_frame)
 
     def creat_power_area(self):
         """创建动力区域"""
