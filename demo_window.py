@@ -152,7 +152,7 @@ class ControlPanel:
         self.max_min_switches = []  # 存储布尔开关
         self.update_queue = {}  # 存储数据更新的字典
         self.previous_update_queue = {}  # 上次的更新字典
-        self.bool_buttons = []  # 存储布尔按钮
+        self.ctrl_bool_buttons = {}  # 存储布尔按钮
         self.rec_bool_buttons = {}  # 存储接收信号按钮的字典
         self.update_queue['start_subscribe'] = False  # 初始化订阅状态为 False
         self.update_queue['connect_status'] = False
@@ -876,7 +876,7 @@ class ControlPanel:
         btn = tk.Button(frame, text=label, relief='raised')
         btn.config(command=lambda b=btn: toggle(btn=b))
         btn.pack(side=tk.TOP, anchor='center', padx=5)
-        self.bool_buttons.append(bool_var)
+        self.ctrl_bool_buttons['ctrl_'+label] = bool_var
 
     def update(self):
         """更新按钮点击事件"""
@@ -916,14 +916,8 @@ class ControlPanel:
     def output_bool_status(self):
         """每秒输出一次所有布尔值按钮的状态并加上心跳值"""
         while not self.closing:
-            bool_status = []
-            for i, bool_var in enumerate(self.bool_buttons):
-                if i < 16:
-                    bool_status.append(f"power{i+1} {'True' if bool_var.get() else 'False'}")
-                    self.update_queue[f"power{i+1}"] = 'True' if bool_var.get() else 'False'
-                else:
-                    bool_status.append(f"aux{i-15} {'1' if bool_var.get() else '0'}")
-                    self.update_queue[f"aux{i-15}"] = '1' if bool_var.get() else '0'
+            for s, bool_var in self.ctrl_bool_buttons.items():
+                self.update_queue[s] = True if bool_var.get() else False
             for s, bool_var in self.rec_bool_buttons.items():
                 self.update_queue[s] = True if bool_var.get() else False
 
