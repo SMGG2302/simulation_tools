@@ -105,7 +105,7 @@ class ControlPanel:
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # 设置主框架的行列配置
-        self.main_frame.grid_columnconfigure(0, weight=3, minsize=250)  # 左侧区域权重
+        self.main_frame.grid_columnconfigure(0, weight=3, minsize=300)  # 左侧区域权重
         self.main_frame.grid_columnconfigure(1, weight=3, minsize=150)  # 中间区域权重
         self.main_frame.grid_columnconfigure(2, weight=3, minsize=150)  # 右侧日志权重
         self.main_frame.grid_columnconfigure(3, weight=1, minsize=450)
@@ -252,16 +252,20 @@ class ControlPanel:
         action_container.pack(fill=tk.BOTH, expand=True)
         
         # 创建画布和滚动条
-        self.action_canvas = tk.Canvas(action_container, highlightthickness=0)
-        action_scrollbar = tk.Scrollbar(action_container, orient="vertical", command=self.action_canvas.yview)
+        self.action_canvas = tk.Canvas(action_container, highlightthickness=0, width=250)
+        action_scrollbar = tk.Scrollbar(action_container, orient="vertical", command=self.action_canvas.yview, width=16)
+        # 设置滚动条颜色使其更加明显
+        action_scrollbar.configure(
+            bg="#808080",          # 滚动条本身的颜色
+            troughcolor="#c0c0c0", # 滚动条槽的颜色
+            activebackground="#606060"  # 滚动条激活时的颜色
+        )
         self.action_scrollable_frame = tk.Frame(self.action_canvas)
 
         # 配置画布和滚动区域
         self.action_scrollable_frame.bind(
             "<Configure>",
-            lambda e: self.action_canvas.configure(
-                scrollregion=self.action_canvas.bbox("all")
-            )
+            self.on_frame_configure
         )
 
         self.action_canvas.create_window((0, 0), window=self.action_scrollable_frame, anchor="nw")
@@ -271,17 +275,15 @@ class ControlPanel:
         self.action_canvas.pack(side="left", fill="both", expand=True)
         action_scrollbar.pack(side="right", fill="y")
 
-        # 绑定鼠标滚轮事件
-        def _on_mousewheel(event):
-            self.action_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-            
-        self.action_canvas.bind_all("<MouseWheel>", _on_mousewheel)
-        self.action_scrollable_frame.bind("<MouseWheel>", _on_mousewheel)
-
         # 创建左侧滑动条和开关
-        for i in range(20):  # 创建 8 对滑动条和布尔开关
+        for i in range(20):  # 创建 20 对滑动条和布尔开关
             self.create_slider(f"Action{i+1}", self.action_scrollable_frame)
-
+            
+    def on_frame_configure(self, event=None):
+        """当滚动框架大小改变时更新画布的滚动区域"""
+        # 强制设置一个足够大的滚动区域，确保滚动条始终可用
+        self.action_canvas.configure(scrollregion=(0, 0, 300, 2000))
+            
     def creat_power_area(self):
         """创建动力区域"""
         # 创建中间布尔值按钮
@@ -750,7 +752,7 @@ class ControlPanel:
     def create_slider(self, label, parent):
         # 创建滑动条框架
         frame = tk.Frame(parent)
-        frame.pack(fill=tk.X, pady=4)
+        frame.pack(fill=tk.X, pady=2)
 
         # 顶部标题标签，显示例如: Action1：127
         title_label = tk.Label(frame, text=f"{label}：127", anchor='w')
