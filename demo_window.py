@@ -244,17 +244,17 @@ class ControlPanel:
 
     def creat_action_area(self):
         """创建动作区域"""
-        # 创建左侧滑动条和开关
-        for i in range(8):  # 创建 8 对滑动条和布尔开关
-            self.create_slider(f"Action{i+1}", self.action_frame)
-
         # 创建更新按钮
         self.create_update_button(self.action_frame)
+
+        # 创建左侧滑动条和开关
+        for i in range(20):  # 创建 8 对滑动条和布尔开关
+            self.create_slider(f"Action{i+1}", self.action_frame)
 
     def creat_power_area(self):
         """创建动力区域"""
         # 创建中间布尔值按钮
-        for i in range(16):
+        for i in range(40):
             self.create_bool_button(f"power{i+1}", self.power_frame)
         # 创建换挡的滑动条（模拟换挡杆）
         self.gear_slider = tk.Scale(self.power_frame, from_=1, to=6, orient="horizontal", length=200, sliderlength=20)
