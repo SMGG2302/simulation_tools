@@ -244,9 +244,6 @@ class ControlPanel:
 
     def creat_action_area(self):
         """创建动作区域"""
-        # 创建更新按钮
-        self.create_update_button(self.action_frame)
-
         # 创建带滚动条的动作区域容器
         action_container = tk.Frame(self.action_frame)
         action_container.pack(fill=tk.BOTH, expand=True)
@@ -824,6 +821,7 @@ class ControlPanel:
             bvar.set(not bvar.get())
             if bvar.get():
                 btn.config(relief='sunken', bg='lightgrey')
+                self.update()
             else:
                 btn.config(relief='raised', bg=default_bg)
 
@@ -851,11 +849,6 @@ class ControlPanel:
         btn.config(command=lambda b=btn: toggle(btn=b))
         btn.pack(side=tk.TOP, anchor='center', padx=5)
         self.bool_buttons.append(bool_var)
-
-    def create_update_button(self, parent):
-        """创建更新按钮"""
-        self.update_button = tk.Button(parent, text="Update", command=self.update)
-        self.update_button.pack(pady=10)
 
     def update(self):
         """更新按钮点击事件"""
