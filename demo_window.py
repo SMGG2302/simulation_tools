@@ -801,14 +801,14 @@ class ControlPanel:
 
     def _inc_dec_slider(self, label, delta):
         """根据 label 找到对应 slider，增减 delta（±1），并更新显示"""
-        for slider_label, slider in self.sliders:
+        for slider_label in self.sliders:
             if slider_label == label:
                 try:
-                    cur = int(slider.get())
+                    cur = int(self.sliders[slider_label].get())
                 except Exception:
                     cur = 0
                 new = max(0, min(255, cur + delta))
-                slider.set(new)
+                self.sliders[slider_label].set(new)
                 break
     
     def _create_send_button(self, frame, label, action_name):
