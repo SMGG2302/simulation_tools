@@ -147,9 +147,9 @@ class ControlPanel:
         # 初始化滑动条参数
         self.max_val = 255  # 最大值
         self.current_gear = 1  # 初始挡位设置为1
-        self.sliders = []  # 存储滑动条
+        self.sliders = {}  # 存储滑动条
         self.slider_labels = []  # 存储滑动条标签
-        self.max_min_switches = []  # 存储布尔开关
+        self.analog_enable_list = {} # 存储是否发送对应模拟量
         self.update_queue = {}  # 存储数据更新的字典
         self.previous_update_queue = {}  # 上次的更新字典
         self.ctrl_bool_buttons = {}  # 存储布尔按钮
@@ -285,7 +285,7 @@ class ControlPanel:
         action_scrollable_frame = self.create_canvas_scrollbar(self.action_frame, width=250)
         # 创建左侧滑动条和开关
         for i in range(20):  # 创建 20 对滑动条和布尔开关
-            self.create_slider(f"Action{i+1}", action_scrollable_frame)
+            self.create_slider(f"action{i+1}", action_scrollable_frame)
             
     def creat_power_area(self):
         """创建动力区域"""
@@ -761,7 +761,7 @@ class ControlPanel:
         row.pack(fill=tk.X, padx=5)
 
         # action选择按钮
-        self._create_send_button(row, '发送')
+        self._create_send_button(row, label='发送', action_name=label)
         
         # 小型复位按钮（置为中值）
         reset_btn = tk.Button(row, text='复位', width=4, command=lambda l=label: self.reset_slider_by_label(l))
@@ -782,14 +782,13 @@ class ControlPanel:
         slider.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # 存储：label 名称、slider 对象以及对应的标题标签（用于更新显示）
-        self.sliders.append((label, slider, title_label))
+        self.sliders[label]=slider
 
     def reset_slider_by_label(self, label):
         """通过标签重置对应的滑动条"""
-        for slider_label, slider, label_widget in self.sliders:
+        for slider_label, slider in self.sliders:
             if slider_label == label:
                 slider.set(127)
-                label_widget.config(text=f"{label}：127")
                 break
 
     def update_slider_value(self, value, label_widget, label_name):
@@ -798,11 +797,11 @@ class ControlPanel:
             v = int(float(value))
         except Exception:
             v = 0
-        label_widget.config(text=f"{label_name}：{v}")
+        # label_widget.config(text=f"{label_name}：{v}")
 
     def _inc_dec_slider(self, label, delta):
         """根据 label 找到对应 slider，增减 delta（±1），并更新显示"""
-        for slider_label, slider, label_widget in self.sliders:
+        for slider_label, slider in self.sliders:
             if slider_label == label:
                 try:
                     cur = int(slider.get())
@@ -810,10 +809,9 @@ class ControlPanel:
                     cur = 0
                 new = max(0, min(255, cur + delta))
                 slider.set(new)
-                label_widget.config(text=f"{label}：{new}")
                 break
     
-    def _create_send_button(self, frame, label):
+    def _create_send_button(self, frame, label, action_name):
         """创建 action 发送按钮"""
         bool_var = tk.BooleanVar(value=False)
 
@@ -822,14 +820,16 @@ class ControlPanel:
             bvar.set(not bvar.get())
             if bvar.get():
                 btn.config(relief='sunken', bg='lightgrey')
+                self.analog_enable_list[action_name] = bool_var.get()
                 self.update()
             else:
                 btn.config(relief='raised', bg=default_bg)
+                self.analog_enable_list[action_name] = bool_var.get()
+                self.update()
 
         btn = tk.Button(frame, text=label, relief='raised')
         btn.config(command=lambda b=btn: toggle(btn=b))
         btn.pack(side=tk.LEFT, anchor='center', padx=5, pady=(6, 0))
-        self.max_min_switches.append(bool_var)
 
     def create_bool_button(self, label, parent):
         """创建布尔值按钮"""
@@ -855,33 +855,36 @@ class ControlPanel:
         """更新按钮点击事件"""
         try:
             # 获取滑动条的当前值并根据最大值计算
-            max_vals = []
-            for _, slider, _ in self.sliders:
-                max_vals.append(int(slider.get() * self.max_val / 255))
+            # max_vals = []
+            # for _, slider in self.sliders:
+            #     max_vals.append(int(slider.get() * self.max_val / 255))
 
             # 将信号更新操作移到一个新的线程中，避免阻塞主线程
-            update_thread = threading.Thread(target=self.send_control_signals, args=(max_vals,))
+            update_thread = threading.Thread(target=self.send_control_signals)
             update_thread.daemon = True
             update_thread.start()
 
         except ValueError:
             print("无效的输入。请输入有效的数字。")
 
-    def send_signal(self, i, max_val, bool_var):
+    def send_signal(self, name, staus):
         """在子线程中发送控制信号"""
-        if bool_var.get():  # 如果布尔值为 True，则发送该数据
-            self.update_queue[f"action{i+1}"] = max_val
+        while staus:  # 如果布尔值为 True，则发送该数据
+            current_val = self.sliders[name].get()
+            self.update_queue['ctrl_'+name] = current_val
+            print(f"发送控制信号: {name} = {current_val}")
+            time.sleep(1)
 
-    def send_control_signals(self, max_vals):
+    def send_control_signals(self):
         """在新的线程中执行控制信号的发送并更新update_queue"""
         threads = []
-        switches = [var for var in self.max_min_switches]
-        for i, (max_val, bool_var) in enumerate(zip(max_vals, switches)):
-            # 创建线程并启动，确保传递所有参数
-            thread = threading.Thread(target=self.send_signal, args=(i, max_val, bool_var))
+
+        for action_name in self.analog_enable_list.keys():
+            print(f"正在发送控制信号: {action_name}")
+            thread = threading.Thread(target=self.send_signal, args=(action_name, self.analog_enable_list[action_name]))
             threads.append(thread)
             thread.start()
-
+        
         # 等待所有线程完成
         for thread in threads:
             thread.join()
