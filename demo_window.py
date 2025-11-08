@@ -753,7 +753,7 @@ class ControlPanel:
         frame.pack(fill=tk.X, pady=2)
 
         # 顶部标题标签，显示例如: Action1：127
-        title_label = tk.Label(frame, text=f"{label}：127", anchor='w')
+        title_label = tk.Label(frame, text=label, anchor='w')
         title_label.pack(fill=tk.X, padx=5, pady=(0, 2))
 
         # 横向容器：左侧放小按钮（发送,复位、-、+），右侧放滑动条
