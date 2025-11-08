@@ -147,7 +147,8 @@ class ControlPanel:
         # 初始化滑动条参数
         self.max_val = 255  # 最大值
         self.current_gear = 1  # 初始挡位设置为1
-        self.sliders = {}  # 存储滑动条
+        self.sliders = {}  # 存储滑动条,用于更新标签
+        self.slider_values = {}  # 存储滑动条值，用于实时更新(避免在子线程中操作TK对象)
         self.slider_labels = []  # 存储滑动条标签
         self.analog_enable_list = {} # 存储是否发送对应模拟量
         self.update_queue = {}  # 存储数据更新的字典
@@ -159,6 +160,7 @@ class ControlPanel:
         self.update_queue['send_status'] = False
         self.update_queue['subscribe_status'] = False
         self.flag = False # 用于判断是否有按键按下的标志位
+
 
         # 创建顶部功能按钮
         self.create_top_area()
@@ -777,27 +779,29 @@ class ControlPanel:
 
         # 滑动条，占据剩余空间
         slider = tk.Scale(row, from_=0, to=255, orient="horizontal",
-                          command=lambda val, lbl=title_label, nm=label: self.update_slider_value(val, lbl, nm))
+                          command=lambda val, nm=label: self.update_slider_value(val, nm))
         slider.set(127)  # 默认初始值为127
         slider.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        # 存储：label 名称、slider 对象以及对应的标题标签（用于更新显示）
+        # 存储：label 名称、slider 对象
         self.sliders[label]=slider
+        # 存储：label 名称、slider 值
+        self.slider_values[label]=slider.get()
 
     def reset_slider_by_label(self, label):
         """通过标签重置对应的滑动条"""
-        for slider_label, slider in self.sliders:
-            if slider_label == label:
-                slider.set(127)
+        for action_name in self.sliders:
+            if action_name == label:
+                self.sliders[action_name].set(127)
                 break
 
-    def update_slider_value(self, value, label_widget, label_name):
+    def update_slider_value(self, value, label_name):
         """更新滑动条的当前值标签，显示为 'LabelName：value'"""
         try:
             v = int(float(value))
+            self.slider_values[label_name] = v
         except Exception:
             v = 0
-        # label_widget.config(text=f"{label_name}：{v}")
 
     def _inc_dec_slider(self, label, delta):
         """根据 label 找到对应 slider，增减 delta（±1），并更新显示"""
@@ -809,6 +813,7 @@ class ControlPanel:
                     cur = 0
                 new = max(0, min(255, cur + delta))
                 self.sliders[slider_label].set(new)
+                self.slider_values[slider_label] = new
                 break
     
     def _create_send_button(self, frame, label, action_name):
@@ -820,11 +825,11 @@ class ControlPanel:
             bvar.set(not bvar.get())
             if bvar.get():
                 btn.config(relief='sunken', bg='lightgrey')
-                self.analog_enable_list[action_name] = bool_var.get()
+                self.analog_enable_list[action_name] = bvar.get()
                 self.update()
             else:
                 btn.config(relief='raised', bg=default_bg)
-                self.analog_enable_list[action_name] = bool_var.get()
+                self.analog_enable_list[action_name] = bvar.get()
                 self.update()
 
         btn = tk.Button(frame, text=label, relief='raised')
@@ -854,11 +859,6 @@ class ControlPanel:
     def update(self):
         """更新按钮点击事件"""
         try:
-            # 获取滑动条的当前值并根据最大值计算
-            # max_vals = []
-            # for _, slider in self.sliders:
-            #     max_vals.append(int(slider.get() * self.max_val / 255))
-
             # 将信号更新操作移到一个新的线程中，避免阻塞主线程
             update_thread = threading.Thread(target=self.send_control_signals)
             update_thread.daemon = True
@@ -867,10 +867,10 @@ class ControlPanel:
         except ValueError:
             print("无效的输入。请输入有效的数字。")
 
-    def send_signal(self, name, staus):
+    def send_signal(self, name, status):
         """在子线程中发送控制信号"""
-        while staus:  # 如果布尔值为 True，则发送该数据
-            current_val = self.sliders[name].get()
+        while status:  # 如果布尔值为 True，则发送该数据
+            current_val = self.slider_values[name]
             self.update_queue['ctrl_'+name] = current_val
             print(f"发送控制信号: {name} = {current_val}")
             time.sleep(1)
@@ -879,7 +879,7 @@ class ControlPanel:
         """在新的线程中执行控制信号的发送并更新update_queue"""
         threads = []
 
-        for action_name in self.analog_enable_list.keys():
+        for action_name in self.analog_enable_list:
             print(f"正在发送控制信号: {action_name}")
             thread = threading.Thread(target=self.send_signal, args=(action_name, self.analog_enable_list[action_name]))
             threads.append(thread)
