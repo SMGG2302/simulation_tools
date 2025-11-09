@@ -151,6 +151,7 @@ class ControlPanel:
         self.slider_values = {}  # 存储滑动条值，用于实时更新(避免在子线程中操作TK对象)
         self.slider_labels = []  # 存储滑动条标签
         self.analog_enable_list = {} # 存储是否发送对应模拟量
+        self.analog_threads = {} # 存储模拟量线程
         self.update_queue = {}  # 存储数据更新的字典
         self.previous_update_queue = {}  # 上次的更新字典
         self.ctrl_bool_buttons = {}  # 存储布尔按钮
@@ -823,14 +824,13 @@ class ControlPanel:
         default_bg = frame.cget('bg')
         def toggle(bvar=bool_var, btn=None):
             bvar.set(not bvar.get())
-            if bvar.get():
+            if bvar.get(): # 按键按下
                 btn.config(relief='sunken', bg='lightgrey')
                 self.analog_enable_list[action_name] = bvar.get()
-                self.update()
-            else:
+                self.update(action_name=action_name)
+            else: # 按键抬起
                 btn.config(relief='raised', bg=default_bg)
                 self.analog_enable_list[action_name] = bvar.get()
-                self.update()
 
         btn = tk.Button(frame, text=label, relief='raised')
         btn.config(command=lambda b=btn: toggle(btn=b))
@@ -856,38 +856,35 @@ class ControlPanel:
         btn.pack(side=tk.TOP, anchor='center', padx=5)
         self.ctrl_bool_buttons['ctrl_'+label] = bool_var
 
-    def update(self):
+    def update(self, action_name):
         """更新按钮点击事件"""
         try:
             # 将信号更新操作移到一个新的线程中，避免阻塞主线程
-            update_thread = threading.Thread(target=self.send_control_signals)
+            update_thread = threading.Thread(target=self.send_control_signals, args=(action_name,))
             update_thread.daemon = True
             update_thread.start()
+            print(f"已发送控制信号: {action_name}")
 
         except ValueError:
             print("无效的输入。请输入有效的数字。")
 
-    def send_signal(self, name, status):
+    def send_signal(self, action_name):
         """在子线程中发送控制信号"""
-        while status:  # 如果布尔值为 True，则发送该数据
-            current_val = self.slider_values[name]
-            self.update_queue['ctrl_'+name] = current_val
-            print(f"发送控制信号: {name} = {current_val}")
+        while self.analog_enable_list[action_name]:  # 如果布尔值为 True，则发送该数据
+            current_val = self.slider_values[action_name]
+            self.update_queue['ctrl_'+action_name] = current_val
             time.sleep(1)
 
-    def send_control_signals(self):
+    def send_control_signals(self, action_name):
         """在新的线程中执行控制信号的发送并更新update_queue"""
-        threads = []
-
-        for action_name in self.analog_enable_list:
-            print(f"正在发送控制信号: {action_name}")
-            thread = threading.Thread(target=self.send_signal, args=(action_name, self.analog_enable_list[action_name]))
-            threads.append(thread)
+        # 创建或者等待线程关闭线程
+        if self.analog_threads.get(action_name) == None:
+            thread = threading.Thread(target=self.send_signal, args=(action_name,))
             thread.start()
-        
-        # 等待所有线程完成
-        for thread in threads:
-            thread.join()
+            self.analog_threads[action_name] = thread
+            self.analog_threads[action_name].join()
+        else:
+            return
 
     def output_bool_status(self):
         """每秒输出一次所有布尔值按钮的状态并加上心跳值"""
