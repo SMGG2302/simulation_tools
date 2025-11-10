@@ -118,7 +118,7 @@ class  MainScreenSimulator:
     def time_for_send_signal(self):
         get_mqtt_protocol_timeouts=self.config_manager.get_mqtt_protocol_timeouts()
         send_times = get_mqtt_protocol_timeouts.get('heartbeat_detection_interval_sec', 1)
-        return send_times
+        return float(send_times)
     
     def get_config_manager(self):
         return self.config_manager

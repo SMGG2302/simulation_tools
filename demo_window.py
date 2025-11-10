@@ -184,12 +184,6 @@ class ControlPanel:
         self.bool_thread.daemon = True  # 确保主程序退出时，线程也会退出
         self.bool_thread.start()
 
-        # 启动心跳线程，每隔1秒输出心跳值
-        self.heartbeat_thread = threading.Thread(target=self.generate_heartbeat)
-        self.heartbeat_thread.daemon = True
-        self.heartbeat_value = 0  # 初始心跳值
-        self.heartbeat_thread.start()
-
         # 重定向标准输出到文本框
         self.text_redirector = TextRedirector(self.log_text, self.root)
         sys.stdout = self.text_redirector
@@ -409,10 +403,9 @@ class ControlPanel:
         device_cfg = mqtt_cfg.get('device_config', {})
         current_broker = mqtt_cfg.get('broker', '')
         current_device_serial = device_cfg.get('device_serial', '')
-        current_excavator_template = device_cfg.get('device_type', '')
-
-        # 机型选项（可根据需要扩展）
-        machine_options = [current_excavator_template, '挖掘机', '压路机', '洒水车', '钻机', '平地机', '装载机']
+        system_cfg = device_cfg.get('system', {})
+        mqtt_timeout_cfg = system_cfg.get('mqtt_timeouts', {})
+        current_heartbeat_interval = mqtt_timeout_cfg.get('heartbeat_detection_interval_sec', 1)
 
         # 创建弹窗
         top = tk.Toplevel(self.root)
@@ -441,24 +434,25 @@ class ControlPanel:
         device_entry = tk.Entry(top, textvariable=device_var)
         device_entry.pack(fill='x', padx=10, pady=5)
 
-        tk.Label(top, text='机型选择:').pack(anchor='w', padx=10, pady=(5, 0))
-        machine_var = tk.StringVar(value=machine_options[0])
-        # 使用原生 tk 的 OptionMenu （统一为 tk 小部件以便统一配色）
-        machine_menu = tk.OptionMenu(top, machine_var, *machine_options)
-        machine_menu.config(width=30)
-        machine_menu.pack(fill='x', padx=10, pady=5)
+        tk.Label(top, text='心跳发送间隔:').pack(anchor='w', padx=10, pady=(5, 0))
+        heart_send = tk.StringVar(value=float(current_heartbeat_interval))
+        heartbeat_entry = tk.Entry(top, textvariable=heart_send)
+        heartbeat_entry.pack(fill='x', padx=10, pady=5)
 
         def on_confirm():
             nonlocal cfg
             new_broker = broker_var.get().strip()
             new_device = device_var.get().strip()
-            new_machine_tpl = machine_var.get().strip()
+            new_heartbeat = heart_send.get().strip()
 
             if not new_broker:
                 print('Broker 地址不能为空')
                 return
             if not new_device:
                 print('设备号不能为空')
+                return            
+            if not new_heartbeat:
+                print('心跳间隔不能为空')
                 return
 
             # 写回 config.json
@@ -469,10 +463,7 @@ class ControlPanel:
                     cfg['mqtt'] = {}
                 cfg['mqtt']['broker'] = new_broker
                 cfg['mqtt']['simulation_broker'] = new_broker
-                if 'device_config' not in cfg['mqtt']:
-                    cfg['mqtt']['device_config'] = {}
-                cfg['mqtt']['device_config']['device_serial'] = str(new_device)
-                cfg['mqtt']['device_config']['device_type'] = new_machine_tpl
+                cfg['system']['mqtt_timeouts']['heartbeat_detection_interval_sec'] = new_heartbeat
 
                 with open(cfg_path, 'w', encoding='utf-8') as f:
                     json.dump(cfg, f, indent=2, ensure_ascii=False)
@@ -895,12 +886,6 @@ class ControlPanel:
                 self.update_queue[s] = True if bool_var.get() else False
 
             time.sleep(0.1)  # 每秒输出一次布尔值状态
-
-    def generate_heartbeat(self):
-        """生成心跳值并循环"""
-        while not self.closing:
-            self.heartbeat_value = (self.heartbeat_value + 1) % 256  # 心跳值循环
-            time.sleep(1)  # 每秒更新一次心跳值
 
     def getout_update_queue(self):
         """获取 update_queue 字典"""
