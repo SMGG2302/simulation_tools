@@ -919,6 +919,7 @@ class ControlPanel:
             thread.start()
             self.analog_threads[action_name] = thread
             self.analog_threads[action_name].join()
+            self.analog_threads[action_name] = None
         else:
             return
 
