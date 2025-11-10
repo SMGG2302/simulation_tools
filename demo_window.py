@@ -105,15 +105,15 @@ class ControlPanel:
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # 设置主框架的行列配置
-        self.main_frame.grid_columnconfigure(0, weight=3, minsize=300)  # 左侧区域权重
-        self.main_frame.grid_columnconfigure(1, weight=3, minsize=150)  # 中间区域权重
-        self.main_frame.grid_columnconfigure(2, weight=3, minsize=150)  # 右侧日志权重
-        self.main_frame.grid_columnconfigure(3, weight=1, minsize=450)
+        self.main_frame.grid_columnconfigure(0, weight=3, minsize=300)  # action区域权重
+        self.main_frame.grid_columnconfigure(1, weight=3, minsize=150)  # power区域权重
+        self.main_frame.grid_columnconfigure(2, weight=3, minsize=150)  # aux区域权重
+        self.main_frame.grid_columnconfigure(3, weight=1, minsize=450)  # 日志区域权重
         self.main_frame.grid_rowconfigure(1, weight=1)     # 垂直方向扩展，注意行号变为1
 
         # 创建顶部功能按钮框架
         self.top_frame = tk.Frame(self.main_frame, bg=self.bg_color)
-        self.top_frame.grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+        self.top_frame.grid(row=0, column=0, columnspan=4, padx=5, pady=5, sticky="ew")
 
         # 创建action动作类框架
         self.action_frame = tk.Frame(self.main_frame, bg=self.bg_color)
@@ -147,6 +147,8 @@ class ControlPanel:
         # 初始化滑动条参数
         self.max_val = 255  # 最大值
         self.current_gear = 1  # 初始挡位设置为1
+        self.heartbeat_interval = 1.0 # 创建变量用于标签显示发送间隔
+        self.heartbeat_var = tk.StringVar(value="心跳状态: 停止")
         self.sliders = {}  # 存储滑动条,用于更新标签
         self.slider_values = {}  # 存储滑动条值，用于实时更新(避免在子线程中操作TK对象)
         self.slider_labels = []  # 存储滑动条标签
@@ -275,7 +277,8 @@ class ControlPanel:
         self.create_top_button("停止发送", self.stop_send)
         self.create_top_button("设置参数", self.set_parameters)
         self.create_top_button("订阅弹窗", self.show_subscriber_window)
-            
+        self.create_heartbeat_label()
+
     def creat_action_area(self):
         """创建动作区域"""
         # 创建带滚动条的动作区域容器
@@ -327,6 +330,11 @@ class ControlPanel:
         button = tk.Button(self.top_frame, text=text, command=command)
         button.pack(side=tk.LEFT, padx=5, pady=5)
 
+    def create_heartbeat_label(self):
+        """创建心跳标签"""
+        label = tk.Label(self.top_frame, textvariable=self.heartbeat_var, font=("Arial", 10, "bold"))
+        label.pack(side=tk.RIGHT, padx=5, pady=5)
+
     def start_connect(self):
         """开始测试功能"""
         if self.update_queue and self.update_queue.get('connect_status') == True:
@@ -371,6 +379,7 @@ class ControlPanel:
                 print("已经请求启动信号发送，请勿重复请求")
             else:
                 self.update_queue['start_send'] = True
+                self.heartbeat_var.set(f"心跳状态:发送, 发送间隔:{self.heartbeat_interval}s")
                 print("已请求启动信号发送")
 
     def stop_send(self):
@@ -382,6 +391,8 @@ class ControlPanel:
                 print("已经请求停止信号发送，请勿重复请求")
             else:
                 self.update_queue['stop_send'] = True
+                self.heartbeat_var.set("心跳状态:停止")
+                print("已请求停止信号发送")
 
     def set_parameters(self):
         """设置参数功能：仅当 MQTT 未连接时生效，弹出窗口设置 broker、设备号和机型，并写回 config.json。"""
@@ -406,6 +417,7 @@ class ControlPanel:
         system_cfg = device_cfg.get('system', {})
         mqtt_timeout_cfg = system_cfg.get('mqtt_timeouts', {})
         current_heartbeat_interval = mqtt_timeout_cfg.get('heartbeat_detection_interval_sec', 1)
+        self.heartbeat_interval = current_heartbeat_interval
 
         # 创建弹窗
         top = tk.Toplevel(self.root)
@@ -464,6 +476,7 @@ class ControlPanel:
                 cfg['mqtt']['broker'] = new_broker
                 cfg['mqtt']['simulation_broker'] = new_broker
                 cfg['system']['mqtt_timeouts']['heartbeat_detection_interval_sec'] = new_heartbeat
+                self.heartbeat_interval = new_heartbeat
 
                 with open(cfg_path, 'w', encoding='utf-8') as f:
                     json.dump(cfg, f, indent=2, ensure_ascii=False)

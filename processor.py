@@ -129,7 +129,7 @@ class  MainScreenSimulator:
         while self.running and not self.shutdown_event.is_set():
             if self.is_connected:  
                 self.send_heartbeat()    
-                print(f"当前发送速度: {self.time_for_send_signal()}")
+                # print(f"当前发送速度: {self.time_for_send_signal()}")
             # 检查是否需要退出
             if self.shutdown_event.is_set():
                 break
@@ -155,7 +155,8 @@ class  MainScreenSimulator:
                 retain=False
             )
             if result == mqtt.MQTT_ERR_SUCCESS:
-                print(f"已发送心跳: {self.heartbeat_value} - {self.safe_topic}")
+                # print(f"已发送心跳: {self.heartbeat_value} - {self.safe_topic}")
+                pass
             else:
                 print(f"发送心跳失败: {result}")
                 return False
@@ -171,7 +172,7 @@ class  MainScreenSimulator:
             if self.is_connected:  
                 self.send_control_signals()
                 send_count+=1
-                print(f"已发送{send_count}个控制信号")  
+                print(f"已发送{send_count}波控制信号")  
             # 检查是否需要退出
             if self.shutdown_event.is_set():
                 break
