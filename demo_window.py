@@ -80,7 +80,7 @@ class ControlPanel:
         self.bg_color = "#f7f7f7"
         self.fg_color = "#000000"
 
-        self.root.geometry("1200x900")  # 调整窗口大小，更宽一些以容纳所有控件
+        self.root.geometry("1300x900")  # 调整窗口大小，更宽一些以容纳所有控件
         self.root.title("模拟操作台")
         # 尝试设置主窗口图标（使用项目目录下的 simulator.ico）
         try:
@@ -106,8 +106,8 @@ class ControlPanel:
 
         # 设置主框架的行列配置
         self.main_frame.grid_columnconfigure(0, weight=3, minsize=300)  # action区域权重
-        self.main_frame.grid_columnconfigure(1, weight=3, minsize=150)  # power区域权重
-        self.main_frame.grid_columnconfigure(2, weight=3, minsize=150)  # aux区域权重
+        self.main_frame.grid_columnconfigure(1, weight=3, minsize=250)  # power区域权重
+        self.main_frame.grid_columnconfigure(2, weight=3, minsize=200)  # aux区域权重
         self.main_frame.grid_columnconfigure(3, weight=1, minsize=450)  # 日志区域权重
         self.main_frame.grid_rowconfigure(1, weight=1)     # 垂直方向扩展，注意行号变为1
 
@@ -151,6 +151,7 @@ class ControlPanel:
         self.heartbeat_var = tk.StringVar(value="心跳状态: 停止")
         self.sliders = {}  # 存储滑动条,用于更新标签
         self.slider_values = {}  # 存储滑动条值，用于实时更新(避免在子线程中操作TK对象)
+        self.bool_sliders = {}  # 存储布尔滑动条
         self.slider_labels = []  # 存储滑动条标签
         self.analog_enable_list = {} # 存储是否发送对应模拟量
         self.analog_threads = {} # 存储模拟量线程
@@ -266,11 +267,11 @@ class ControlPanel:
     def on_frame_configure(self, canvas):
         """当滚动框架大小改变时更新画布的滚动区域"""
         # 强制设置一个足够大的滚动区域，确保滚动条始终可用
-        canvas.configure(scrollregion=(0, 0, 300, 2000))
+        canvas.configure(scrollregion=(0, 0, 300, 3000))
         
     def create_top_area(self):
         """创建顶部按钮"""
-        # 添加功能按钮
+        # 添加功能按钮和心跳标签
         self.create_top_button("开始连接", self.start_connect)
         self.create_top_button("停止连接", self.stop_connect)
         self.create_top_button("开始发送", self.start_send)
@@ -290,7 +291,7 @@ class ControlPanel:
     def creat_power_area(self):
         """创建动力区域"""
         # 创建动力区域容器
-        power_scrollable_frame = self.create_canvas_scrollbar(self.power_frame, width=100)
+        power_scrollable_frame = self.create_canvas_scrollbar(self.power_frame, width=200)
         # 创建中间布尔值按钮
         for i in range(40):
             self.create_bool_button(f"power{i+1}", power_scrollable_frame)
@@ -759,7 +760,7 @@ class ControlPanel:
         frame = tk.Frame(parent)
         frame.pack(fill=tk.X, pady=2)
 
-        # 顶部标题标签，显示例如: Action1：127
+        # 顶部标题标签，显示例如: Action1
         title_label = tk.Label(frame, text=label, anchor='w')
         title_label.pack(fill=tk.X, padx=5, pady=(0, 2))
 
@@ -767,7 +768,7 @@ class ControlPanel:
         row = tk.Frame(frame)
         row.pack(fill=tk.X, padx=5)
 
-        # action选择按钮
+        # action发送按钮
         self._create_send_button(row, label='发送', action_name=label)
         
         # 小型复位按钮（置为中值）
@@ -775,11 +776,11 @@ class ControlPanel:
         reset_btn.pack(side=tk.LEFT, padx=(0, 4), pady=(6, 0))
 
         # 减一按钮
-        dec_btn = tk.Button(row, text='−', width=1, command=lambda s_label=label: self._inc_dec_slider(s_label, -1))
+        dec_btn = tk.Button(row, text='−', width=1, command=lambda s_label=label: self._inc_dec_slider(s_label, -1, self.sliders))
         dec_btn.pack(side=tk.LEFT, padx=(0, 4), pady=(6, 0))
 
         # 加一按钮
-        inc_btn = tk.Button(row, text='+', width=1, command=lambda s_label=label: self._inc_dec_slider(s_label, 1))
+        inc_btn = tk.Button(row, text='+', width=1, command=lambda s_label=label: self._inc_dec_slider(s_label, 1, self.sliders))
         inc_btn.pack(side=tk.LEFT, padx=(0, 6), pady=(6, 0))
 
         # 滑动条，占据剩余空间
@@ -808,16 +809,16 @@ class ControlPanel:
         except Exception:
             v = 0
 
-    def _inc_dec_slider(self, label, delta):
+    def _inc_dec_slider(self, label, delta, sliders):
         """根据 label 找到对应 slider，增减 delta（±1），并更新显示"""
-        for slider_label in self.sliders:
+        for slider_label in sliders:
             if slider_label == label:
                 try:
-                    cur = int(self.sliders[slider_label].get())
+                    cur = int(sliders[slider_label].get())
                 except Exception:
                     cur = 0
                 new = max(0, min(255, cur + delta))
-                self.sliders[slider_label].set(new)
+                sliders[slider_label].set(new)
                 self.slider_values[slider_label] = new
                 break
     
@@ -845,20 +846,50 @@ class ControlPanel:
         frame = tk.Frame(parent)
         frame.pack(fill=tk.X, pady=2)
 
-        bool_var = tk.BooleanVar(value=False)
+        # 顶部标题标签，显示例如: Power1
+        title_label = tk.Label(frame, text=label, anchor='w')
+        title_label.pack(fill=tk.X, padx=5, pady=(0, 2))
 
-        default_bg = frame.cget('bg')
-        def toggle(bvar=bool_var, btn=None):
-            bvar.set(not bvar.get())
-            if bvar.get():
-                btn.config(relief='sunken', bg='lightgrey')
+        # 横向容器：左侧放小按钮（发送,复位、-、+），右侧放滑动条
+        row = tk.Frame(frame)
+        row.pack(fill=tk.X, padx=5)
+
+        # 创建变量类型切换按钮
+        self.create_switch_button(row, label)
+
+        # 减一按钮
+        dec_btn = tk.Button(row, text='−', width=1, command=lambda s_label=label: self._inc_dec_slider(s_label, -1, self.bool_sliders))
+        dec_btn.pack(side=tk.LEFT, padx=(0, 4), pady=(6, 0))
+
+        # 加一按钮
+        inc_btn = tk.Button(row, text='+', width=1, command=lambda s_label=label: self._inc_dec_slider(s_label, 1, self.bool_sliders))
+        inc_btn.pack(side=tk.LEFT, padx=(0, 6), pady=(6, 0))
+
+        # 创建滑动条
+        slider = tk.Scale(row, from_=0, to=1, orient="horizontal",
+                          command=lambda val, nm=label: self.update_slider_value(val, nm))
+        slider.set(0)  # 默认初始值为0
+        slider.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        # 存储slider对象
+        self.bool_sliders[label]=slider
+
+    def create_switch_button(self, frame, label):
+        """创建数据类型切换按钮"""
+        def switch(btn=None):
+            if btn.cget("text") == 'bool':
+                btn.config(text = 'int')
+                self.bool_sliders[label].config(from_=0, to=7, orient="horizontal")
             else:
-                btn.config(relief='raised', bg=default_bg)
+                btn.config(text = 'bool')
+                self.bool_sliders[label].config(from_=0, to=1, orient="horizontal")
+            # 重置值
+            self.bool_sliders[label].set(0)
 
-        btn = tk.Button(frame, text=label, relief='raised')
-        btn.config(command=lambda b=btn: toggle(btn=b))
-        btn.pack(side=tk.TOP, anchor='center', padx=5)
-        self.ctrl_bool_buttons['ctrl_'+label] = bool_var
+        btn = tk.Button(frame, text='bool', relief='raised')
+        btn.config(command=lambda b=btn: switch(btn=b))
+        btn.pack(side=tk.LEFT, anchor='center', padx=5, pady=(6, 0))
+
 
     def update(self, action_name):
         """更新按钮点击事件"""
@@ -893,8 +924,11 @@ class ControlPanel:
     def output_bool_status(self):
         """每秒输出一次所有布尔值按钮的状态并加上心跳值"""
         while not self.closing:
-            for s, bool_var in self.ctrl_bool_buttons.items():
-                self.update_queue[s] = True if bool_var.get() else False
+            for s in self.bool_sliders:
+                if self.bool_sliders[s].cget("to") <= 1:
+                    self.update_queue["ctrl_"+s] = True if self.bool_sliders[s].get() else False
+                else:
+                    self.update_queue["ctrl_"+s] = self.bool_sliders[s].get()
             for s, bool_var in self.rec_bool_buttons.items():
                 self.update_queue[s] = True if bool_var.get() else False
 
