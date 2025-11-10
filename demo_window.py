@@ -476,7 +476,7 @@ class ControlPanel:
                     cfg['mqtt'] = {}
                 cfg['mqtt']['broker'] = new_broker
                 cfg['mqtt']['simulation_broker'] = new_broker
-                cfg['mqtt']['device_config'] = {}
+                cfg['mqtt']['device_config'] = new_device
                 cfg['system']['mqtt_timeouts']['heartbeat_detection_interval_sec'] = new_heartbeat
                 self.heartbeat_interval = new_heartbeat
 
