@@ -356,7 +356,52 @@ class ControlPanel:
 
     def guide_window(self):
         """显示使用说明窗口"""
+        guide_window = tk.Toplevel(self.root, height=300, width=400)
+        guide_window.title("使用说明")
+        
+        # 添加说明文本
+        guide_text = """
+模拟操作台使用说明：
 
+1. 连接功能：
+   - 点击"开始连接"按钮开始MQTT连接
+   - 连接成功后日志中提示"连接成功"
+   - 点击"停止连接"按钮断开MQTT连接
+----------------------------------------------
+2. 发送功能：
+   - 点击"发送发送"按钮开始数据发送  
+   - 点击"停止发送"按钮停止数据发送
+----------------------------------------------
+3. 订阅功能：
+   - 点击"订阅弹窗"按钮打开订阅窗口
+   - 点击对应按钮订阅对应消息
+----------------------------------------------
+4. 滑动条操作：
+   - 拖动滑动条调整数值
+   - 松开鼠标后数值生效并发送
+   - 点击"重置"按钮将所有滑动条恢复到中值
+----------------------------------------------
+5. 布尔按钮：
+   - 点击按钮切换bool/int型状态
+   - int型最多发送7, bool型最多发送1
+----------------------------------------------
+6. 心跳状态：
+   - 右上角显示当前心跳状态
+   - "开启"表示正常发送心跳包
+"""
+        
+        # 创建文本框显示说明
+        text_widget = tk.Text(guide_window, wrap=tk.WORD, padx=10, pady=10)
+        text_widget.insert(tk.END, guide_text)
+        text_widget.config(state=tk.DISABLED)  # 设置为只读
+        
+        # 添加滚动条
+        scrollbar = tk.Scrollbar(guide_window, orient=tk.VERTICAL, command=text_widget.yview)
+        text_widget.config(yscrollcommand=scrollbar.set)
+        
+        # 布局
+        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     def start_connect(self):
         """开始测试功能"""
