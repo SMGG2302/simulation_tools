@@ -162,7 +162,7 @@ class ControlPanel:
         self.update_queue['send_status'] = False
         self.update_queue['subscribe_status'] = False
         self.flag = False # 用于判断是否有按键按下的标志位
-        self.heartbeat_interval = self.get_config().get("heartbeat_interval", 1.0) # 创建变量用于标签显示发送间隔
+        self.heartbeat_interval = self.get_config().get("heartbeat_interval", "1.0") # 创建变量用于标签显示发送间隔
         self.broker_addr = self.get_config().get("broker", "127.0.0.1")
         self.device_serial = self.get_config().get("device_serial", "1")
         self.heartbeat_var = tk.StringVar(value=f"心跳状态: 停止, 发送间隔: {self.heartbeat_interval}s")
@@ -283,6 +283,7 @@ class ControlPanel:
         self.create_top_button("停止发送", self.stop_send)
         self.create_top_button("设置参数", self.set_parameters)
         self.create_top_button("订阅弹窗", self.show_subscriber_window)
+        self.create_top_button("清除日志", self.log_clear)
         self.create_heartbeat_label()
         self.create_broker_label()
         self.create_device_label()
@@ -413,8 +414,15 @@ class ControlPanel:
                 print("已经请求停止信号发送，请勿重复请求")
             else:
                 self.update_queue['stop_send'] = True
-                self.heartbeat_var.set("心跳状态:停止")
+                self.heartbeat_var.set(f"心跳状态:停止，发送间隔:{self.heartbeat_interval}s")
                 print("已请求停止信号发送")
+    
+    def log_clear(self):
+        """清空日志"""
+        self.log_text.config(state='normal')
+        self.log_text.delete(1.0, tk.END)
+        self.log_text.config(state='disabled')
+        print("已清空日志")
 
     def get_config(self):
         # 仅在 MQTT 未连接（connect_status == False）时允许设置
@@ -436,10 +444,9 @@ class ControlPanel:
         device_cfg = mqtt_cfg.get('device_config', {})
         current_broker = mqtt_cfg.get('broker', '')
         current_device_serial = device_cfg.get('device_serial', '')
-        system_cfg = device_cfg.get('system', {})
+        system_cfg = cfg.get('system', {})
         mqtt_timeout_cfg = system_cfg.get('mqtt_timeouts', {})
-        current_heartbeat_interval = mqtt_timeout_cfg.get('heartbeat_detection_interval_sec', 1)
-        self.heartbeat_interval = current_heartbeat_interval
+        current_heartbeat_interval = mqtt_timeout_cfg.get('heartbeat_detection_interval_sec', '')
         return {
             'broker': current_broker,
             'device_serial': current_device_serial,
@@ -465,7 +472,7 @@ class ControlPanel:
         device_cfg = mqtt_cfg.get('device_config', {})
         current_broker = mqtt_cfg.get('broker', '')
         current_device_serial = device_cfg.get('device_serial', '')
-        system_cfg = device_cfg.get('system', {})
+        system_cfg = cfg.get('system', {})
         mqtt_timeout_cfg = system_cfg.get('mqtt_timeouts', {})
         current_heartbeat_interval = mqtt_timeout_cfg.get('heartbeat_detection_interval_sec', '1.0')
         self.heartbeat_interval = current_heartbeat_interval
