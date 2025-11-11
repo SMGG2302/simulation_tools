@@ -147,8 +147,6 @@ class ControlPanel:
         # 初始化滑动条参数
         self.max_val = 255  # 最大值
         self.current_gear = 1  # 初始挡位设置为1
-        self.heartbeat_interval = 1.0 # 创建变量用于标签显示发送间隔
-        self.heartbeat_var = tk.StringVar(value="心跳状态: 停止")
         self.sliders = {}  # 存储滑动条,用于更新标签
         self.slider_values = {}  # 存储滑动条值，用于实时更新(避免在子线程中操作TK对象)
         self.bool_sliders = {}  # 存储布尔滑动条
@@ -164,6 +162,12 @@ class ControlPanel:
         self.update_queue['send_status'] = False
         self.update_queue['subscribe_status'] = False
         self.flag = False # 用于判断是否有按键按下的标志位
+        self.heartbeat_interval = self.get_config().get("heartbeat_interval", 1.0) # 创建变量用于标签显示发送间隔
+        self.broker_addr = self.get_config().get("broker", "127.0.0.1")
+        self.device_serial = self.get_config().get("device_serial", "1")
+        self.heartbeat_var = tk.StringVar(value=f"心跳状态: 停止, 发送间隔: {self.heartbeat_interval}s")
+        self.broker_var = tk.StringVar(value=f"MQTT Broker: {self.broker_addr}")
+        self.device_var = tk.StringVar(value=f"设备编号: {self.device_serial}")
 
 
         # 创建顶部功能按钮
@@ -272,6 +276,7 @@ class ControlPanel:
     def create_top_area(self):
         """创建顶部按钮"""
         # 添加功能按钮和心跳标签
+        self.create_top_button("使用说明", self.guide_window)
         self.create_top_button("开始连接", self.start_connect)
         self.create_top_button("停止连接", self.stop_connect)
         self.create_top_button("开始发送", self.start_send)
@@ -279,6 +284,8 @@ class ControlPanel:
         self.create_top_button("设置参数", self.set_parameters)
         self.create_top_button("订阅弹窗", self.show_subscriber_window)
         self.create_heartbeat_label()
+        self.create_broker_label()
+        self.create_device_label()
 
     def creat_action_area(self):
         """创建动作区域"""
@@ -335,6 +342,20 @@ class ControlPanel:
         """创建心跳标签"""
         label = tk.Label(self.top_frame, textvariable=self.heartbeat_var, font=("Arial", 10, "bold"))
         label.pack(side=tk.RIGHT, padx=5, pady=5)
+
+    def create_broker_label(self):
+        """创建MQTT服务器标签"""
+        label = tk.Label(self.top_frame, textvariable=self.broker_var, font=("Arial", 10, "bold"))
+        label.pack(side=tk.RIGHT, padx=5, pady=5)
+
+    def create_device_label(self):
+        """创建设备标签"""
+        label = tk.Label(self.top_frame, textvariable=self.device_var, font=("Arial", 10, "bold"))
+        label.pack(side=tk.RIGHT, padx=5, pady=5)
+
+    def guide_window(self):
+        """显示使用说明窗口"""
+
 
     def start_connect(self):
         """开始测试功能"""
@@ -395,6 +416,35 @@ class ControlPanel:
                 self.heartbeat_var.set("心跳状态:停止")
                 print("已请求停止信号发送")
 
+    def get_config(self):
+        # 仅在 MQTT 未连接（connect_status == False）时允许设置
+        if self.update_queue and self.update_queue.get('connect_status'):
+            print("MQTT 正在连接或已连接，无法修改参数，请先停止 MQTT 后再设置。")
+            return
+
+        # 读取当前配置（config.json 相对于当前工作目录）以填充默认值
+        cfg_path = os.path.abspath('config.json')
+        try:
+            with open(cfg_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+        except Exception as e:
+            print(f"读取配置文件失败: {e}")
+            cfg = {}
+
+        # 返回配置内容
+        mqtt_cfg = cfg.get('mqtt', {})
+        device_cfg = mqtt_cfg.get('device_config', {})
+        current_broker = mqtt_cfg.get('broker', '')
+        current_device_serial = device_cfg.get('device_serial', '')
+        system_cfg = device_cfg.get('system', {})
+        mqtt_timeout_cfg = system_cfg.get('mqtt_timeouts', {})
+        current_heartbeat_interval = mqtt_timeout_cfg.get('heartbeat_detection_interval_sec', 1)
+        self.heartbeat_interval = current_heartbeat_interval
+        return {
+            'broker': current_broker,
+            'device_serial': current_device_serial,
+            'heartbeat_interval': current_heartbeat_interval
+        }
     def set_parameters(self):
         """设置参数功能：仅当 MQTT 未连接时生效，弹出窗口设置 broker、设备号和机型，并写回 config.json。"""
         # 仅在 MQTT 未连接（connect_status == False）时允许设置
@@ -417,7 +467,7 @@ class ControlPanel:
         current_device_serial = device_cfg.get('device_serial', '')
         system_cfg = device_cfg.get('system', {})
         mqtt_timeout_cfg = system_cfg.get('mqtt_timeouts', {})
-        current_heartbeat_interval = mqtt_timeout_cfg.get('heartbeat_detection_interval_sec', 1)
+        current_heartbeat_interval = mqtt_timeout_cfg.get('heartbeat_detection_interval_sec', '1.0')
         self.heartbeat_interval = current_heartbeat_interval
 
         # 创建弹窗
@@ -479,6 +529,9 @@ class ControlPanel:
                 cfg['mqtt']['device_config']['device_serial'] = new_device
                 cfg['system']['mqtt_timeouts']['heartbeat_detection_interval_sec'] = new_heartbeat
                 self.heartbeat_interval = new_heartbeat
+                self.heartbeat_var.set(f"心跳状态: 停止, 心跳间隔: {new_heartbeat}s")
+                self.broker_var.set(f"MQTT Broker: {new_broker}")
+                self.device_var.set(f"设备编号: {new_device}")
 
                 with open(cfg_path, 'w', encoding='utf-8') as f:
                     json.dump(cfg, f, indent=2, ensure_ascii=False)
@@ -891,7 +944,6 @@ class ControlPanel:
         btn.config(command=lambda b=btn: switch(btn=b))
         btn.pack(side=tk.LEFT, anchor='center', padx=5, pady=(6, 0))
 
-
     def update(self, action_name):
         """更新按钮点击事件"""
         try:
@@ -944,10 +996,4 @@ class ControlPanel:
         """重置滑动条到中值并更新标签"""
         slider.set(127)  # 设置滑动条为中值
         label.config(text="127")  # 更新标签为中值
-
-    def update_gear(self, event):
-        """更新档位标签显示"""
-        self.current_gear = self.gear_slider.get()
-        self.gear_label.config(text=f"Power17：{int(self.current_gear)}")
-        self.update_queue["power17"] = self.current_gear  # 更新 update_queue 字典
 
