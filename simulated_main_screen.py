@@ -67,6 +67,8 @@ def run_simulator(stop_flag, config_manager):
         update_queue=update_queue,
         config_manager = config_manager
     )
+    # 创建并启动模拟器线程
+    fail_count = 0 # 失败次数
 
     try:
         print("等待 GUI 发起开始测试 (start_mqtt) 请求...")
@@ -78,14 +80,22 @@ def run_simulator(stop_flag, config_manager):
 
                 # 如果 GUI 请求开始且当前未连接，启动连接并发送线程
                 if simulator_main_screen.update_queue and simulator_main_screen.update_queue.get('start_mqtt'):
-                    print("收到开始请求，尝试连接 MQTT...")                    
-                    if simulator_main_screen.connect():
-                        print("连接MQTT成功")
-                        simulator_main_screen.update_queue['connect_status'] = True
-                        simulator_main_screen.update_queue['start_mqtt'] = False  # 重置开始请求标志
+                    if fail_count <= 3:
+                        print("收到开始请求，尝试连接 MQTT...")                    
+                        if simulator_main_screen.connect():
+                            print("连接MQTT成功")
+                            simulator_main_screen.update_queue['connect_status'] = True
+                            simulator_main_screen.update_queue['start_mqtt'] = False  # 重置开始请求标志
+                            fail_count = 0
+                        else:
+                            print("连接MQTT失败")
+                            simulator_main_screen.update_queue['connect_status'] = False
+                            fail_count += 1
                     else:
-                        print("连接MQTT失败")
+                        print("尝试连接失败次数过多，请检查网络设置")
                         simulator_main_screen.update_queue['connect_status'] = False
+                        simulator_main_screen.update_queue['start_mqtt'] = False  # 重置开始请求标志
+                        fail_count = 0
                 # 检查连接状态，若已连接则处理发送和接收请求
                 if simulator_main_screen.update_queue.get('connect_status'):
                     # 检查是否收到发送请求，如果收到，启动发送信号线程和心跳线程
